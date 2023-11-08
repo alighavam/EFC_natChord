@@ -15,7 +15,7 @@ datFileName = fullfile('data', subjName, ['efc1_', num2str(str2double(subjName(e
 subjFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_raw.tsv']);% output dat file name (saved in analysis folder)
 movFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_mov.mat']); % output mov file name (saved in analysis folder)
 emgFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_emg.mat']); % output emg file name (saved in analysis folder)
-participants_tsv = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', subjName, 'participants.tsv');     % tsv file including subject specific parameters
+participants_tsv = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', 'participants.tsv');     % tsv file including subject specific parameters
 
 % load participants.tsv:
 subj_info = dload(participants_tsv);
@@ -44,12 +44,9 @@ for i = 1:length(D.BN)
         % we'll deal with the natural EMGs later in the code):
         fprintf("Loading emg file %d.\n",D.BN(i))
         emg_data = readtable(fullfile('data', subj_name, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
-        emg_data(1:3,:) = [];
-        emg_data = table2array(emg_data);
         
-        % Extracting triggers of the emg:
-        t = emg_data(:,1);
-        trig = emg_data(:,2);
+        % call emg_chord_prep function:
+        emg_block = emg_chord_prep(emg_data, getrow(D,D.BN == D.BN(i)), getrow(subj_info,subj_info.participant_id == subjName));
         
         oldBlock = D.BN(i);
     end

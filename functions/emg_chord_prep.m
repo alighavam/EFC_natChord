@@ -1,15 +1,19 @@
-function emg_chord_prep()
+function emg_block = emg_chord_prep(emg_data, D_block, subject_info)
+
+
+emg_data(1:3,:) = [];
+% emg_data = table2array(emg_data);
 
 % Extracting triggers of the emg:
 t = emg_data(:,1);
 trig = emg_data(:,2);
 
 % detecting trial start times from the EMGs:
-[~,riseIdx,~,fallIdx] = detectTrig(trig,t,0.4,sum(D.BN == D.BN(i)),1);
+[~,riseIdx,~,fallIdx] = detectTrig(trig,t,0.4,length(D_block.BN),1);
 
 % if number of triggers did not make sense, throw and error:
-if (length(riseIdx) ~= length(fallIdx) || length(riseIdx) ~= sum(D.BN == D.BN(i)))
-    error('Trigger detection went wrong! Block Number = %d',D.BN(i))
+if (length(riseIdx) ~= length(fallIdx) || length(riseIdx) ~= length(D_block.BN))
+    error('Trigger detection went wrong! Block Number = %d',D_block.BN(1))
 end
 
 % emg channels to selected from the emg table:
