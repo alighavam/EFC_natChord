@@ -11,11 +11,11 @@ usr_path = userpath;
 usr_path = usr_path(1:end-17);
 
 % set file names:
-datFileName = ['data/' subjName '/' 'efc1_' num2str(str2double(subjName(end-1:end))) '.dat'];       % input .dat file
-subjFileName = [usr_path '/Desktop/Projects/EFC_natChord/analysis/natChord_' subjName '_raw.tsv'];  % output dat file name (saved in analysis folder)
-movFileName = [usr_path '/Desktop/Projects/EFC_natChord/analysis/natChord_' subjName '_mov.mat'];   % output mov file name (saved in analysis folder)
-emgFileName = [usr_path '/Desktop/Projects/EFC_natChord/analysis/natChord_' subjName '_emg.mat'];   % output emg file name (saved in analysis folder)
-participants_tsv = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', subjName, 'participants.tsv');       % tsv file including subject specific parameters
+datFileName = fullfile('data', subjName, ['efc1_', num2str(str2double(subjName(end-1:end))), '.dat']);                  % input .dat file
+subjFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_raw.tsv']);% output dat file name (saved in analysis folder)
+movFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_mov.mat']); % output mov file name (saved in analysis folder)
+emgFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_emg.mat']); % output emg file name (saved in analysis folder)
+participants_tsv = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', 'participants.tsv');     % tsv file including subject specific parameters
 
 % load participants.tsv:
 subj_info = dload(participants_tsv);
@@ -29,23 +29,37 @@ MOV_struct = cell(length(D.BN),1);
 EMG_struct = cell(length(D.BN),1);
 
 % EMG filters:
-hd = bandpass_filter;
-hd_lowpass = lowpass_filter;
+hd = emg_filter_designer(fs_emg, 'bandpass');                       % creates my default bpf
+hd_lpf = emg_filter_designer(fs_emg, 10, 20, 500, 510, varargin);   % creates my default bpf
 
 oldBlock = -1;
 % loop on trials:
 for i = 1:length(D.BN)
-    % load the mov file for each block:
+    % load the mov file of the block:
     if (oldBlock ~= D.BN(i))
         fprintf("Loading the .mov file.\n")
         mov = movload(['data/' subjName '/' 'efc1_' num2str(str2double(subjName(end-1:end))) '_' num2str(D.BN(i),'%02d') '.mov']);
+        
+        % load the emg file of the block (this is chord EMG not natural,
+        % we'll deal with the natural EMGs later in the code):
+        fprintf("Loading emg file %d.\n",D.BN(i))
+        emg_data = readtable(fullfile('data', subjName, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
+        
+        % call emg_chord_prep function:
+        emg_block = emg_chord_prep(emg_data, getrow(D,D.BN == D.BN(i)), ...
+                                   getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), ...
+                                   hd);
+        
         oldBlock = D.BN(i);
     end
     fprintf('Block: %d , Trial: %d\n',D.BN(i),D.TN(i));
+    
+    
+
     % trial routine:
     C = efc1_trial(getrow(D,i));
 
-    % adding the routine output to the container:
+    % adding the trial routine output to the container:
     ANA = addstruct(ANA,C,'row','force');
 
     % MOV file: 

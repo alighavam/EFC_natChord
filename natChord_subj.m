@@ -3,19 +3,24 @@ function ANA = natChord_subj(subjName,varargin)
 % Handling the input arguments:
 smoothing_win_length = 25;  % force smoothing window size in ms
 fs_force = 500;             % force signals sampling rate in Hz
-fs_emg = 2148.1481;         % EMG sampling rate in Hz   
-vararginoptions(varargin,{'smoothing_win_length'});
+fs_emg = 2148.1481;         % EMG sampling rate in Hz  
+lpf = 0;                    % flag to do lowpass filtering;
+Fpass_lpf = 20;
+Fstop_lpf = 30;
+vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf'});
 
 % setting paths:
 usr_path = userpath;
 usr_path = usr_path(1:end-17);
 
+project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+
 % set file names:
-datFileName = fullfile('data', subjName, ['efc1_', num2str(str2double(subjName(end-1:end))), '.dat']);                  % input .dat file
-subjFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_raw.tsv']);% output dat file name (saved in analysis folder)
-movFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_mov.mat']); % output mov file name (saved in analysis folder)
-emgFileName = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'analysis', ['natChord_' subjName '_emg.mat']); % output emg file name (saved in analysis folder)
-participants_tsv = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', 'participants.tsv');     % tsv file including subject specific parameters
+datFileName = fullfile(project_path, 'data', subjName, ['efc1_', num2str(str2double(subjName(end-1:end))), '.dat']);                  % input .dat file
+subjFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_raw.tsv']);% output dat file name (saved in analysis folder)
+movFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_mov.mat']); % output mov file name (saved in analysis folder)
+emgFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_emg.mat']); % output emg file name (saved in analysis folder)
+participants_tsv = fullfile(project_path, 'data', 'participants.tsv');     % tsv file including subject specific parameters
 
 % load participants.tsv:
 subj_info = dload(participants_tsv);
@@ -29,8 +34,12 @@ MOV_struct = cell(length(D.BN),1);
 EMG_struct = cell(length(D.BN),1);
 
 % EMG filters:
-hd = bandpass_filter;
-hd_lowpass = lowpass_filter;
+hd = emg_filter_designer(fs_emg, 'filter_type', 'bandpass');   % creates my default bpf (20,500)Hz
+if (lpf == 1)
+    hd_lpf = emg_filter_designer(fs_emg, 'filter_type', 'lowpass','Fpass_lpf',Fpass_lpf,'Fstop_lpf',Fstop_lpf);    % creates lpf
+else
+    hd_lpf = [];
+end
 
 oldBlock = -1;
 % loop on trials:
@@ -38,30 +47,35 @@ for i = 1:length(D.BN)
     % load the mov file of the block:
     if (oldBlock ~= D.BN(i))
         fprintf("Loading the .mov file.\n")
-        mov = movload(['data/' subjName '/' 'efc1_' num2str(str2double(subjName(end-1:end))) '_' num2str(D.BN(i),'%02d') '.mov']);
+        mov = movload(fullfile(project_path, 'data', subjName, ['efc1_' num2str(str2double(subjName(end-1:end))) '_' num2str(D.BN(i),'%02d') '.mov']));
         
         % load the emg file of the block (this is chord EMG not natural,
         % we'll deal with the natural EMGs later in the code):
         fprintf("Loading emg file %d.\n",D.BN(i))
-        emg_data = readtable(fullfile('data', subj_name, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
+        emg_data = readtable(fullfile('data', subjName, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
         
         % call emg_chord_prep function:
-        emg_block = emg_chord_prep(emg_data, getrow(D,D.BN == D.BN(i)), getrow(subj_info,subj_info.participant_id == subjName));
+        [emg_block,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs_emg, getrow(D,D.BN == D.BN(i)), mov, ...
+                                                getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), ...
+                                                hd,hd_lpf);
         
         oldBlock = D.BN(i);
     end
     fprintf('Block: %d , Trial: %d\n',D.BN(i),D.TN(i));
     
-    
-
     % trial routine:
-    C = efc1_trial(getrow(D,i));
+    C = natChord_trial(getrow(D,i));
+    C.emg_baseline = baseline_emg(D.TN(i),:);
+    C.emg_hold_avg = hold_avg_EMG(D.TN(i),:);
 
     % adding the trial routine output to the container:
     ANA = addstruct(ANA,C,'row','force');
 
     % MOV file: 
-    MOV_struct{i} = smoothing(mov{D.TN(i)}, smoothing_win_length, fs);
+    MOV_struct{i} = smoothing(mov{D.TN(i)}, smoothing_win_length, fs_emg);
+    
+    % EMG file:
+    EMG_struct{i} = emg_block;
 end
 
 % adding subject name to the struct:
@@ -76,8 +90,9 @@ ANA.sn = sn;
 % saving ANA as a tab delimited file:
 dsave(subjFileName,ANA);
 
-% saving mov data as a binary file:
-save(movFileName ,'MOV_struct')
+% saving mov and EMG data as binary files:
+save(movFileName, 'MOV_struct')
+save(emgFileName, 'EMG_struct')
 
 
 
