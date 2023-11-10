@@ -7,7 +7,12 @@ fs_emg = 2148.1481;         % EMG sampling rate in Hz
 lpf = 0;                    % flag to do lowpass filtering;
 Fpass_lpf = 20;
 Fstop_lpf = 30;
-vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf'});
+natural_window_size = 200;      % window size to sample natural EMG
+sampling_option = 'whole';      % sampling option to select windows from natural EMGs.
+natural_window_type = 'Rect';   % sampling window type for natural EMGs.
+wn_spacing = 2;                 % sampling spacing for the 'whole_sampled' option.
+vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
+                          'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
 % setting paths:
 usr_path = userpath;
@@ -16,7 +21,7 @@ usr_path = usr_path(1:end-17);
 project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
 
 % set file names:
-datFileName = fullfile(project_path, 'data', subjName, ['efc1_', num2str(str2double(subjName(end-1:end))), '.dat']);                  % input .dat file
+datFileName = fullfile(project_path, 'data', subjName, ['efc1_', num2str(str2double(subjName(end-1:end))), '.dat']); % input .dat file
 subjFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_raw.tsv']);% output dat file name (saved in analysis folder)
 movFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_mov.mat']); % output mov file name (saved in analysis folder)
 emgFileName = fullfile(project_path, 'analysis', ['natChord_' subjName '_emg.mat']); % output emg file name (saved in analysis folder)
@@ -64,9 +69,7 @@ for i = 1:length(D.BN)
     fprintf('Block: %d , Trial: %d\n',D.BN(i),D.TN(i));
     
     % trial routine:
-    C = natChord_trial(getrow(D,i));
-    C.emg_baseline = baseline_emg(D.TN(i),:);
-    C.emg_hold_avg = hold_avg_EMG(D.TN(i),:);
+    C = natChord_trial(getrow(D,i),baseline_emg(D.TN(i),:),hold_avg_EMG(D.TN(i),:));
 
     % adding the trial routine output to the container:
     ANA = addstruct(ANA,C,'row','force');
@@ -75,7 +78,7 @@ for i = 1:length(D.BN)
     MOV_struct{i} = smoothing(mov{D.TN(i)}, smoothing_win_length, fs_emg);
     
     % EMG file:
-    EMG_struct{i} = emg_block;
+    EMG_struct{i} = emg_block{D.TN(i)};
 end
 
 % adding subject name to the struct:
@@ -93,6 +96,21 @@ dsave(subjFileName,ANA);
 % saving mov and EMG data as binary files:
 save(movFileName, 'MOV_struct')
 save(emgFileName, 'EMG_struct')
+
+
+% Preprocessing and dealing with the natural EMGs:
+fprintf("Processing natural EMG data...\n\n")
+make_natural_emg(subjName,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+
+
+
+
+
+
+
+
+
+
 
 
 
