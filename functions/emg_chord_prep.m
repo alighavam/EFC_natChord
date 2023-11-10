@@ -84,7 +84,7 @@ for j = 1:size(emg_data_selected,2)
     emg_data_selected(:,j) = abs(filtfilt(hd.Numerator, 1, emg_data_selected(:,j)));
     if (~isempty(hd_lpf))
         fprintf("Lowpass Filtering rectified channel %d/%d...\n",j,size(emg_data_selected,2))
-        emg_data(:,j) = filtfilt(hd_lpf.Numerator, 1, emg_data_selected(:,j));
+        emg_data_selected(:,j) = filtfilt(hd_lpf.Numerator, 1, emg_data_selected(:,j));
     end
 end
 
