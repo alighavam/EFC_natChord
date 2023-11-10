@@ -46,7 +46,7 @@ oldBlock = -1;
 for i = 1:length(D.BN)
     % load the mov file of the block:
     if (oldBlock ~= D.BN(i))
-        fprintf("Loading the .mov file.\n")
+        fprintf("Loading the .mov file. Block %d\n",D.BN(i))
         mov = movload(fullfile(project_path, 'data', subjName, ['efc1_' num2str(str2double(subjName(end-1:end))) '_' num2str(D.BN(i),'%02d') '.mov']));
         
         % load the emg file of the block (this is chord EMG not natural,
