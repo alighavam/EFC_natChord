@@ -123,13 +123,8 @@ for j = 1:length(riseIdx)
         idx_plan_onset = 1;
     end
 
-    % averaging EMG during plan onset:
-    idx_plan_onset
-    idx_plan_onset+round(D_block.planTime(1)/1000*fs)
-    j
-
     fprintf('\n\n')
-    
+
     baseline_avg_tmp = mean(emg_trial(idx_plan_onset:idx_plan_onset+round(D_block.planTime(1)/1000*fs),:), 1);
     % ===========================================================================
     
