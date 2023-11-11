@@ -31,8 +31,8 @@ switch (what)
         % single struct called efc1_all.mat
         
         % getting subject files:
-        files = dir(fullfile(usr_path, 'Desktop', 'Projects', 'EFC1', 'analysis', 'efc1_*_raw.tsv'));
-        movFiles = dir(fullfile(usr_path, 'Desktop', 'Projects', 'EFC1', 'analysis', 'efc1_*_mov.mat'));
+        files = dir(fullfile(project_path, 'analysis', 'natChord_*_raw.tsv'));
+        movFiles = dir(fullfile(project_path, 'analysis', 'natChord_*_mov.mat'));
         
         % container to hold all subjects' data:
         ANA = [];
@@ -87,15 +87,16 @@ switch (what)
             ANA=addstruct(ANA,tmp_data,'row','force');
         end
 
-        dsave(fullfile(usr_path,'Desktop','Projects','EFC1','analysis','efc1_all.tsv'),ANA);
+        dsave(fullfile(project_path,'analysis','natChord_all.tsv'),ANA);
 
-    case 'chord_avg_emg_visualize'
+    case 'avg_chord_patterns'
         % handling input arguments:
         subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name'});
 
         % loading data:
-        data = dload(fullfile(project_path, 'analysis', ['natChord_' subject_name '_raw.tsv']));
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data, data.sn == str2double(subject_name(end-1:end)));
         
         % defining sessions:
         sess = {'sess01','sess02'};
@@ -158,16 +159,106 @@ switch (what)
         end
 
         fprintf("Corr of pattern matrices = %.4f\n",corr2(chord_emg_mat{1},chord_emg_mat{2}))
-
+        varargout{1} = chord_emg_mat;
+        varargout{2} = chords;
     
     case 'visualize_natural_emg'
-        
+        % handling input arguments:
         sampling_option = 'whole';
+        subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name','sampling_option'});
 
+        % set file name:
+        file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
+        
         % loading natural EMG dists:
+        emg_dist = load(file_name);
+        emg_dist = emg_dist.emg_natural_dist;
 
-    
+        % loading subject data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        
+        % calculating avg chord patterns:
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name);
+        
+        % getting avg mean deviation of chords:
+        chords_mean_dev = [];
+        for i = 1:length(chords)
+            row = data.trialCorr==1 & data.chordID==chords(i);
+            chords_mean_dev(i) = mean(data.mean_dev(row));
+        end
+
+        % mapping mean_dev to a color map:
+        
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+        
+        % emg locations:
+        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
+
+        % select 3 random dimensions:
+        dims = randperm(size(chord_emg_mat{1},2));
+        dims = dims(1:3);
+
+        % loop on sessions:
+        figure;
+        for i = 1:length(sess)
+            subplot(1,2,i)
+            
+            % scatter 3D natural EMG dist:
+            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 10, 'k', 'filled');
+            xlabel(emg_locs_names(dims(1)))
+            ylabel(emg_locs_names(dims(2)))
+            zlabel(emg_locs_names(dims(3)))
+            title(sess{i})
+
+            hold all;
+
+            % put avg chord patterns on the plot
+            for j = 1:size(chord_emg_mat{i},1)
+                % in case of single finger chords:
+                if (j <= 10)
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 'g', 'filled')
+                else
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 'r', 'filled')
+                end
+            end
+
+        end
+
+        figure;
+        for i = 1:length(sess)
+            subplot(1,2,i)
+            
+            % pPCA on the natural dist, gets the first 3 dims:
+            [COEFF,SCORE,LATENT] = ppca(emg_dist{i},3);
+
+            % scatter 3D natural EMG dist:
+            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'k', 'filled');
+            xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
+            ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
+            zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
+            title(['pPCA ' sess{i}])
+            
+            hold all;
+
+            % put the transformed avg chord patterns on the plot
+            for j = 1:size(chord_emg_mat{i},1)
+                % in case of single finger chords:
+                if (j <= 10)
+                    tmp = chord_emg_mat{i}(j,:) * COEFF;
+                    scatter3(tmp(1), tmp(2), tmp(3), 'g', 'filled')
+                else
+                    tmp = chord_emg_mat{i}(j,:) * COEFF;
+                    scatter3(tmp(1), tmp(2), tmp(3), 'r', 'filled')
+                end
+            end
+
+        end
+        
+        
     otherwise
         error('The analysis you entered does not exist!')
 end
