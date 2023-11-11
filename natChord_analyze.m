@@ -168,6 +168,10 @@ switch (what)
         subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name','sampling_option'});
 
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+
         % set file name:
         file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
         
@@ -183,17 +187,14 @@ switch (what)
         
         % getting avg mean deviation of chords:
         chords_mean_dev = [];
-        for i = 1:length(chords)
-            row = data.trialCorr==1 & data.chordID==chords(i);
-            chords_mean_dev(i) = mean(data.mean_dev(row));
+        c = [];
+        for j = 1:length(sess)
+            for i = 1:length(chords)
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                tmp_mean_dev(i) = mean(data.mean_dev(row));
+            end
+            chords_mean_dev(:,j) = tmp_mean_dev;
         end
-
-        % mapping mean_dev to a color map:
-        
-
-        % defining sessions:
-        sess = {'sess01','sess02'};
-        sess_blocks = {1:5,6:10};
         
         % emg locations:
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
@@ -215,6 +216,9 @@ switch (what)
             title(sess{i})
 
             hold all;
+            
+            % mapping mean devs to colormap:
+            c = map2color(chords_mean_dev(:,i), autumn);
 
             % put avg chord patterns on the plot
             for j = 1:size(chord_emg_mat{i},1)
@@ -222,11 +226,12 @@ switch (what)
                 if (j <= 10)
                     scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 'g', 'filled')
                 else
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 'r', 'filled')
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 60, 'filled', 'MarkerFaceColor', c(j,:))
                 end
             end
 
         end
+        colorbar;
 
         figure;
         for i = 1:length(sess)
