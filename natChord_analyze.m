@@ -111,7 +111,7 @@ switch (what)
         figure;
         for i = 1:length(sess)
             % get chords of the sessions:
-            sess_rows = data.BN>=sess_blocks{i}(1) & data.BN<=sess_blocks{i}(end);
+            sess_rows = data.BN>=sess_blocks{i}(1) & data.BN<=sess_blocks{i}(end) & data.sn==str2double(subject_name(end-1:end));
             chords = unique(data.chordID(sess_rows));
             
             % sorting chords in an arbitrary way:
@@ -209,7 +209,7 @@ switch (what)
             subplot(1,2,i)
             
             % scatter 3D natural EMG dist:
-            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 10, 'k', 'filled');
+            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7]);
             xlabel(emg_locs_names(dims(1)))
             ylabel(emg_locs_names(dims(2)))
             zlabel(emg_locs_names(dims(3)))
@@ -224,9 +224,9 @@ switch (what)
             for j = 1:size(chord_emg_mat{i},1)
                 % in case of single finger chords:
                 if (j <= 10)
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 'g', 'filled')
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled')
                 else
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 60, 'filled', 'MarkerFaceColor', c(j,:))
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'filled', 'MarkerFaceColor', c(j,:))
                 end
             end
 
@@ -238,10 +238,10 @@ switch (what)
             subplot(1,2,i)
             
             % pPCA on the natural dist, gets the first 3 dims:
-            [COEFF,SCORE,LATENT] = ppca(emg_dist{i},3);
+            [COEFF,SCORE,LATENT] = pca(emg_dist{i},'NumComponents',3);
 
             % scatter 3D natural EMG dist:
-            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'k', 'filled');
+            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7]);
             xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
             ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
             zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
@@ -249,15 +249,18 @@ switch (what)
             
             hold all;
 
+            % mapping mean devs to colormap:
+            c = map2color(chords_mean_dev(:,i), autumn);
+
             % put the transformed avg chord patterns on the plot
             for j = 1:size(chord_emg_mat{i},1)
                 % in case of single finger chords:
                 if (j <= 10)
                     tmp = chord_emg_mat{i}(j,:) * COEFF;
-                    scatter3(tmp(1), tmp(2), tmp(3), 'g', 'filled')
+                    scatter3(tmp(1), tmp(2), tmp(3), 100, 'k', 'filled')
                 else
                     tmp = chord_emg_mat{i}(j,:) * COEFF;
-                    scatter3(tmp(1), tmp(2), tmp(3), 'r', 'filled')
+                    scatter3(tmp(1), tmp(2), tmp(3), 100, 'filled', 'MarkerFaceColor', c(j,:))
                 end
             end
 
