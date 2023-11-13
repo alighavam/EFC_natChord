@@ -209,7 +209,7 @@ switch (what)
             subplot(1,2,i)
             
             % scatter 3D natural EMG dist:
-            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7]);
+            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7], 'HandleVisibility','off');
             xlabel(emg_locs_names(dims(1)))
             ylabel(emg_locs_names(dims(2)))
             zlabel(emg_locs_names(dims(3)))
@@ -224,11 +224,12 @@ switch (what)
             for j = 1:size(chord_emg_mat{i},1)
                 % in case of single finger chords:
                 if (j <= 10)
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled')
+                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled', 'HandleVisibility','off')
                 else
                     scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'filled', 'MarkerFaceColor', c(j,:))
                 end
             end
+            legend(num2str(chords(11:end)))
 
         end
         colorbar;
