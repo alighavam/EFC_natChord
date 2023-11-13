@@ -190,7 +190,7 @@ switch (what)
         c = [];
         for j = 1:length(sess)
             for i = 1:length(chords)
-                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i) & data.sn==str2double(subject_name(end-1:end));
                 tmp_mean_dev(i) = mean(data.mean_dev(row));
             end
             chords_mean_dev(:,j) = tmp_mean_dev;
