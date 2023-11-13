@@ -209,7 +209,7 @@ switch (what)
             subplot(1,2,i)
             
             % scatter 3D natural EMG dist:
-            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7], 'HandleVisibility','off');
+            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6], 'HandleVisibility','off');
             xlabel(emg_locs_names(dims(1)))
             ylabel(emg_locs_names(dims(2)))
             zlabel(emg_locs_names(dims(3)))
@@ -242,7 +242,7 @@ switch (what)
             [COEFF,SCORE,LATENT] = pca(emg_dist{i},'NumComponents',3);
 
             % scatter 3D natural EMG dist:
-            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 8, 'filled', 'MarkerFaceColor', [0.7,0.7,0.7]);
+            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6]);
             xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
             ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
             zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
