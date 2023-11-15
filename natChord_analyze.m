@@ -190,7 +190,8 @@ switch (what)
         sampling_option = 'whole_sampled';
         subject_name = 'subj01';
         normalize_channels = 0;             % flag to whether normalize the channels by their norms or not.
-        vararginoptions(varargin,{'subject_name','sampling_option','normalize_channels'});
+        dimensions = [];                    % dimensions of the natural data to show. by default random dimensions are selected.
+        vararginoptions(varargin,{'subject_name','sampling_option','normalize_channels','dimensions'});
 
         % defining sessions:
         sess = {'sess01','sess02'};
@@ -236,6 +237,15 @@ switch (what)
         % select 3 random dimensions:
         dims = randperm(size(chord_emg_mat{1},2));
         dims = dims(1:3);
+        
+        % if user input dimensions:
+        if (~isempty(dimensions))
+            if length(dimensions) ~= 3
+                warning('Input dimensions length must be 3 -> Changed to random dimensions...')
+            else
+                dims = dimensions;
+            end
+        end
 
         % loop on sessions:
         figure;
@@ -330,8 +340,106 @@ switch (what)
         end
         
         varargout{1} = scales;
+
+    case 'inspect_channels_in_natural'
+        subject_name = 'subj01';
+        sampling_option = 'whole_sampled';
+        vararginoptions(varargin,{'subject_name','sampling_option'});
+        % set natural EMG file name:
+        file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
         
+        % loading natural EMG dists:
+        emg_dist = load(file_name);
+        emg_dist = emg_dist.emg_natural_dist;
+
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
+
+        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_color = ['k','r'];
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_color = ['k','r'];
         
+        % normalizing the natural EMGs:
+        for i = 1:length(sess)
+            emg_dist{i} = emg_dist{i} ./ scales(:,i)';
+        end
+
+        % looping through sessions:
+        figure;
+        for i = 1:length(sess)
+            mean_channels = mean(emg_dist{i},1);
+            sem_channels = std(emg_dist{i})/size(emg_dist{i},1);
+            
+            scatter(1:length(mean_channels),mean_channels,50,sess_color(i),'filled');
+            hold on
+            errorbar(1:length(mean_channels),mean_channels,sem_channels,'LineWidth',0.5,'color',sess_color(i))
+        end
+        title('normalized natural EMGs, avg of channels across samples')
+        xlim([0,length(mean_channels)+1])
+        ylim([0,1])
+        xticks(1:length(mean_channels))
+        xticklabels(emg_locs_names)
+
+    case 'chord_magnitude_difficulty_model'
+        subject_name = 'subj01';
+        plot_option = 1;
+        vararginoptions(varargin,{'subject_name','plot_option'});
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+
+        % loading subject data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
+        
+        % calculating avg chord patterns:
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot',0,'normalize_channels',1);
+        
+        % getting avg mean deviation of chords:
+        chords_mean_dev = [];
+        c = [];
+        for j = 1:length(sess)
+            for i = 1:length(chords)
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                tmp_mean_dev(i) = mean(data.mean_dev(row));
+            end
+            chords_mean_dev(:,j) = tmp_mean_dev;
+        end
+        
+        % removing single finger chords:
+        chords_mean_dev(1:10,:) = [];
+        for i = 1:length(sess)
+            chord_emg_mat{i}(1:10,:) = [];
+        end
+        
+        % correlations of mean dev and patterns within each session
+        corr_sess = zeros(length(sess),1);
+        for i = 1:length(sess)
+            corr_sess(i) = corr(chords_mean_dev(:,i), mean(chord_emg_mat{i},2));
+        end
+        
+        if (plot_option)
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i)
+                scatter(chords_mean_dev(:,i), mean(chord_emg_mat{i},2), 50, 'k', 'filled')
+                title(sprintf('sess %s',i))
+                xlabel('avg mean deviation')
+                ylabel('avg emg across ch and trial')
+                ylim([0,1])
+                xlim([0,5])
+            end
+        end
+        
+        varargout{1} = corr_sess;
+
     otherwise
         error('The analysis you entered does not exist!')
 end
