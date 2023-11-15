@@ -13,16 +13,26 @@ switch (what)
         % handling input arguments:
         subject_name = 'subj01';
         smoothing_win_length = 25;
-        vararginoptions(varargin,{'subject_name','smoothing_win_length'});
+        lpf = 0;                            % wether to do lowpass filtering on the EMG data.
+        sampling_option = 'whole_sampled';  % sampling option for the natural EMG data
+        natural_window_size = 200;          % wn size for natural EMGs sampling in ms.
+        wn_spacing = 2;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
+        natural_window_type = 'Rect';       % window shape for the natural EMG sampling. 'Rect' or 'Gaussian'
+        vararginoptions(varargin,{'subject_name','smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
+                          'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
         
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
             for i = 1:length(subject_name)
-                efc1_subj(subject_name{i},'smoothing_win_length',smoothing_win_length)
+                natChord_subj(subject_name{i},'smoothing_win_length',smoothing_win_length,'lpf',lpf, ...
+                             'sampling_option',sampling_option,'natural_window_size',natural_window_size, ...
+                             'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
             end
         % if a single subject as a char was given:
         else
-            efc1_subj(subject_name,'smoothing_win_length',smoothing_win_length);
+            natChord_subj(subject_name,'smoothing_win_length',smoothing_win_length,'lpf',lpf, ...
+                         'sampling_option',sampling_option,'natural_window_size',natural_window_size, ...
+                         'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
         end
     
     case 'make_analysis_data'
@@ -91,8 +101,10 @@ switch (what)
 
     case 'avg_chord_patterns'
         % handling input arguments:
-        subject_name = 'subj01';
-        vararginoptions(varargin,{'subject_name'});
+        subject_name = 'subj01';    % subject ID
+        plot = 1;                   % flag to plot the avg chord patterns.
+        normalize_channels = 0;     % flag to whether normalize the channels by their norms or not.
+        vararginoptions(varargin,{'subject_name','plot','normalize_channels'});
 
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
@@ -104,11 +116,16 @@ switch (what)
         
         % containers:
         chord_emg_mat = cell(length(sess),1);
-
+        
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
 
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
+
         % looping through sessions:
-        figure;
+        if (plot)
+            figure;
+        end
         for i = 1:length(sess)
             % get chords of the sessions:
             sess_rows = data.BN>=sess_blocks{i}(1) & data.BN<=sess_blocks{i}(end) & data.sn==str2double(subject_name(end-1:end));
@@ -138,52 +155,69 @@ switch (what)
                 chord_emg_mat{i}(j,8) = mean(data.emg_hold_avg_f3(tmp_row));
                 chord_emg_mat{i}(j,9) = mean(data.emg_hold_avg_f4(tmp_row));
                 chord_emg_mat{i}(j,10) = mean(data.emg_hold_avg_f5(tmp_row));
+
+                if (normalize_channels)
+                    chord_emg_mat{i}(j,:) = chord_emg_mat{i}(j,:) ./ scales(:,i)';
+                end
             end
             
-            % plotting the chord EMG patterns:
-            subplot(1,2,i)
-            pcolor([[chord_emg_mat{i}, zeros(size(chord_emg_mat{i},1),1)] ; zeros(1,size(chord_emg_mat{i},2)+1)])
-            colorbar
-            
-            % plot settings:
-            ax = gca;
-            
-            set(ax,'YTick',(1:size(chord_emg_mat{i},1))+0.5)
-            set(ax,'YTickLabel',chords)
-            
-            set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
-            set(ax,'XTickLabel',emg_locs_names)
-            
-            set(gca,'YDir','reverse')
-            title(sess{i})
+            if (plot)
+                % plotting the chord EMG patterns:
+                subplot(1,2,i)
+                pcolor([[chord_emg_mat{i}, zeros(size(chord_emg_mat{i},1),1)] ; zeros(1,size(chord_emg_mat{i},2)+1)])
+                colorbar
+                
+                % plot settings:
+                ax = gca;
+                
+                set(ax,'YTick',(1:size(chord_emg_mat{i},1))+0.5)
+                set(ax,'YTickLabel',chords)
+                
+                set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
+                set(ax,'XTickLabel',emg_locs_names)
+                
+                set(gca,'YDir','reverse')
+                title(sess{i})
+            end
         end
 
-        fprintf("Corr of pattern matrices = %.4f\n",corr2(chord_emg_mat{1},chord_emg_mat{2}))
+        fprintf("Corr of pattern matrices across sessions = %.4f\n",corr2(chord_emg_mat{1},chord_emg_mat{2}))
         varargout{1} = chord_emg_mat;
         varargout{2} = chords;
     
     case 'visualize_natural_emg'
         % handling input arguments:
-        sampling_option = 'whole';
+        sampling_option = 'whole_sampled';
         subject_name = 'subj01';
-        vararginoptions(varargin,{'subject_name','sampling_option'});
+        normalize_channels = 0;             % flag to whether normalize the channels by their norms or not.
+        vararginoptions(varargin,{'subject_name','sampling_option','normalize_channels'});
 
         % defining sessions:
         sess = {'sess01','sess02'};
         sess_blocks = {1:5,6:10};
 
-        % set file name:
+        % set natural EMG file name:
         file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
         
         % loading natural EMG dists:
         emg_dist = load(file_name);
         emg_dist = emg_dist.emg_natural_dist;
 
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
+        
+        if (normalize_channels)
+            % normalizing the natural EMGs:
+            for i = 1:length(sess)
+                emg_dist{i} = emg_dist{i} ./ scales(:,i)';
+            end
+        end
+
         % loading subject data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         
         % calculating avg chord patterns:
-        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name);
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot',0,'normalize_channels',normalize_channels);
         
         % getting avg mean deviation of chords:
         chords_mean_dev = [];
@@ -198,7 +232,7 @@ switch (what)
         
         % emg locations:
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
-
+        
         % select 3 random dimensions:
         dims = randperm(size(chord_emg_mat{1},2));
         dims = dims(1:3);
@@ -225,6 +259,7 @@ switch (what)
                 % in case of single finger chords:
                 if (j <= 10)
                     scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled', 'HandleVisibility','off')
+                % in case of multi finger chords:
                 else
                     scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'filled', 'MarkerFaceColor', c(j,:))
                 end
@@ -234,38 +269,100 @@ switch (what)
         end
         colorbar;
 
-        figure;
+        % figure;
+        % for i = 1:length(sess)
+        %     subplot(1,2,i)
+        % 
+        %     % pPCA on the natural dist, gets the first 3 dims:
+        %     [COEFF,SCORE,LATENT] = pca(emg_dist{i},'NumComponents',3);
+        % 
+        %     % scatter 3D natural EMG dist:
+        %     scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6]);
+        %     xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
+        %     ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
+        %     zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
+        %     title(['pPCA ' sess{i}])
+        % 
+        %     hold all;
+        % 
+        %     % mapping mean devs to colormap:
+        %     c = map2color(chords_mean_dev(:,i), autumn);
+        % 
+        %     % put the transformed avg chord patterns on the plot
+        %     for j = 1:size(chord_emg_mat{i},1)
+        %         % in case of single finger chords:
+        %         if (j <= 10)
+        %             tmp = chord_emg_mat{i}(j,:) * COEFF;
+        %             scatter3(tmp(1), tmp(2), tmp(3), 100, 'k', 'filled')
+        %         else
+        %             tmp = chord_emg_mat{i}(j,:) * COEFF;
+        %             scatter3(tmp(1), tmp(2), tmp(3), 100, 'filled', 'MarkerFaceColor', c(j,:))
+        %         end
+        %     end
+        % 
+        % end
+
+    case 'get_scale_factor_emg'
+        subject_name = 'subj01';
+        vararginoptions(varargin,{'subject_name'});
+
+        % loading data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data, data.sn == str2double(subject_name(end-1:end)));
+        
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+        
+        % containers:
+        chord_emg_mat = cell(length(sess),1);
+
+        % looping through sessions:
         for i = 1:length(sess)
-            subplot(1,2,i)
+            % get chords of the sessions:
+            sess_rows = data.BN>=sess_blocks{i}(1) & data.BN<=sess_blocks{i}(end);
+            chords = unique(data.chordID(sess_rows));
             
-            % pPCA on the natural dist, gets the first 3 dims:
-            [COEFF,SCORE,LATENT] = pca(emg_dist{i},'NumComponents',3);
+            % sorting chords in an arbitrary way:
+            chords_sorted = [19999, 91999, 99199, 99919, 99991, 29999, 92999, 99299, 99929, 99992];
+            [ind,~] = find(chords == chords_sorted);
+            chords = [chords_sorted'; chords(setdiff(1:length(chords),ind))];
 
-            % scatter 3D natural EMG dist:
-            scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6]);
-            xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
-            ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
-            zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
-            title(['pPCA ' sess{i}])
-            
-            hold all;
+            % initialize chord_emg_mat
+            chord_emg_mat{i} = zeros(length(chords),10);
 
-            % mapping mean devs to colormap:
-            c = map2color(chords_mean_dev(:,i), autumn);
+            % looping through chords of the sessions:
+            for j = 1:length(chords)
+                % selecting rows of the chord that were correct trials:
+                tmp_row = sess_rows & data.chordID==chords(j) & data.trialCorr==1;
 
-            % put the transformed avg chord patterns on the plot
-            for j = 1:size(chord_emg_mat{i},1)
-                % in case of single finger chords:
-                if (j <= 10)
-                    tmp = chord_emg_mat{i}(j,:) * COEFF;
-                    scatter3(tmp(1), tmp(2), tmp(3), 100, 'k', 'filled')
-                else
-                    tmp = chord_emg_mat{i}(j,:) * COEFF;
-                    scatter3(tmp(1), tmp(2), tmp(3), 100, 'filled', 'MarkerFaceColor', c(j,:))
-                end
+                % getting the avg of the emg_hold_avg
+                chord_emg_mat{i}(j,1) = mean(data.emg_hold_avg_e1(tmp_row));
+                chord_emg_mat{i}(j,2) = mean(data.emg_hold_avg_e2(tmp_row));
+                chord_emg_mat{i}(j,3) = mean(data.emg_hold_avg_e3(tmp_row));
+                chord_emg_mat{i}(j,4) = mean(data.emg_hold_avg_e4(tmp_row));
+                chord_emg_mat{i}(j,5) = mean(data.emg_hold_avg_e5(tmp_row));
+                chord_emg_mat{i}(j,6) = mean(data.emg_hold_avg_f1(tmp_row));
+                chord_emg_mat{i}(j,7) = mean(data.emg_hold_avg_f2(tmp_row));
+                chord_emg_mat{i}(j,8) = mean(data.emg_hold_avg_f3(tmp_row));
+                chord_emg_mat{i}(j,9) = mean(data.emg_hold_avg_f4(tmp_row));
+                chord_emg_mat{i}(j,10) = mean(data.emg_hold_avg_f5(tmp_row));
             end
-
         end
+        
+        % container for the scaling factors:
+        scales = zeros(size(chord_emg_mat{1},2),2);
+        
+        % looping through sessions:
+        for i = 1:size(scales,2)
+            % getting single finger patterns of the session:
+            tmp = chord_emg_mat{i}(1:10,:);
+            
+            % calculating the channels norms:
+            scales(:,i) = vecnorm(tmp);
+        end
+        
+        varargout{1} = scales;
         
         
     otherwise
