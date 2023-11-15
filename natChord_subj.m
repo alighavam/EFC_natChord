@@ -8,7 +8,7 @@ lpf = 0;                    % flag to do lowpass filtering;
 Fpass_lpf = 20;
 Fstop_lpf = 30;
 natural_window_size = 200;      % window size to sample natural EMG
-sampling_option = 'whole';      % sampling option to select windows from natural EMGs.
+sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
 natural_window_type = 'Rect';   % sampling window type for natural EMGs.
 wn_spacing = 2;                 % sampling spacing for the 'whole_sampled' option.
 vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
