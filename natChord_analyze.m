@@ -269,39 +269,6 @@ switch (what)
         end
         colorbar;
 
-        % figure;
-        % for i = 1:length(sess)
-        %     subplot(1,2,i)
-        % 
-        %     % pPCA on the natural dist, gets the first 3 dims:
-        %     [COEFF,SCORE,LATENT] = pca(emg_dist{i},'NumComponents',3);
-        % 
-        %     % scatter 3D natural EMG dist:
-        %     scatter3(SCORE(:,1), SCORE(:,2), SCORE(:,3), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6]);
-        %     xlabel(sprintf('dim 1, var = %.2f',LATENT(1)))
-        %     ylabel(sprintf('dim 2, var = %.2f',LATENT(2)))
-        %     zlabel(sprintf('dim 3, var = %.2f',LATENT(3)))
-        %     title(['pPCA ' sess{i}])
-        % 
-        %     hold all;
-        % 
-        %     % mapping mean devs to colormap:
-        %     c = map2color(chords_mean_dev(:,i), autumn);
-        % 
-        %     % put the transformed avg chord patterns on the plot
-        %     for j = 1:size(chord_emg_mat{i},1)
-        %         % in case of single finger chords:
-        %         if (j <= 10)
-        %             tmp = chord_emg_mat{i}(j,:) * COEFF;
-        %             scatter3(tmp(1), tmp(2), tmp(3), 100, 'k', 'filled')
-        %         else
-        %             tmp = chord_emg_mat{i}(j,:) * COEFF;
-        %             scatter3(tmp(1), tmp(2), tmp(3), 100, 'filled', 'MarkerFaceColor', c(j,:))
-        %         end
-        %     end
-        % 
-        % end
-
     case 'get_scale_factor_emg'
         subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name'});
