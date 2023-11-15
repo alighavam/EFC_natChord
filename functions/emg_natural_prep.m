@@ -136,11 +136,14 @@ switch sampling_option
         % Creating the sampling intervals:
         intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
         intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
+        
+        % selecting the sample intervals:
+        intervals = intervals(1:wn_spacing:end,:);
 
         % sampling the natural EMGs:
         sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
 
-        for i = 1:wn_spacing:size(intervals,1)
+        for i = 1:size(intervals,1)
             % windowing the interval:
             tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
             sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
