@@ -112,7 +112,7 @@ if (strcmp(wn_type,'Rect'))
     wn = ones(wn_size,size(emg_data_selected,2));
 elseif (strcmp(wn_type,'Gaussian'))
     wn = gausswin(wn_size,3);
-    wn = repmat(wn,size(emg_data_selected,2));
+    wn = repmat(wn,1,size(emg_data_selected,2));
 else
     error('emg_natural_prep: wn_type %s does not exist.',wn_type)
 end
