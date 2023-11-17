@@ -99,6 +99,33 @@ switch (what)
 
         dsave(fullfile(project_path,'analysis','natChord_all.tsv'),ANA);
 
+    case 'make_natural_dist'
+        subject_name = 'subj01';
+        fs_emg = 2148.1481;         % EMG sampling rate in Hz  
+        lpf = 0;                    % flag to do lowpass filtering;
+        Fpass_lpf = 20;
+        Fstop_lpf = 30;
+        natural_window_size = 200;      % window size to sample natural EMG
+        sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
+        natural_window_type = 'Rect';   % sampling window type for natural EMGs.
+        wn_spacing = 2;                 % sampling spacing for the 'whole_sampled' option.
+        vararginoptions(varargin,{'subject_name','lpf','Fpass_lpf','Fstop_lpf', ...
+                                  'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
+        
+        % EMG filters:
+        hd = emg_filter_designer(fs_emg, 'filter_type', 'bandpass');   % creates my default bpf (20,500)Hz
+        if (lpf == 1)
+            hd_lpf = emg_filter_designer(fs_emg, 'filter_type', 'lowpass','Fpass_lpf',Fpass_lpf,'Fstop_lpf',Fstop_lpf);    % creates lpf
+        else
+            hd_lpf = [];
+        end
+
+        subjName = subject_name;
+
+        % Preprocessing and dealing with the natural EMGs:
+        fprintf("Processing natural EMG data...\n\n")
+        make_natural_emg(subjName,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+
     case 'avg_chord_patterns'
         % handling input arguments:
         subject_name = 'subj01';    % subject ID
@@ -189,7 +216,7 @@ switch (what)
         % handling input arguments:
         sampling_option = 'whole_sampled';
         subject_name = 'subj01';
-        normalize_channels = 0;             % flag to whether normalize the channels by their norms or not.
+        normalize_channels = 1;             % flag to whether normalize the channels by their norms or not.
         dimensions = [];                    % dimensions of the natural data to show. by default random dimensions are selected.
         vararginoptions(varargin,{'subject_name','sampling_option','normalize_channels','dimensions'});
 
@@ -528,7 +555,7 @@ switch (what)
         sess_blocks = {1:5,6:10};
         
         % getting num samples vs radius:
-        [n,r] = natChord_analyze('nSphere_numSamples_vs_radius','d_type',d_type,'lambda',lambda,'radius_lim',radius_lim,'n_radius',n_radius,'plot_option',0);
+        [n,r] = natChord_analyze('nSphere_numSamples_vs_radius','sampling_option',sampling_option,'d_type',d_type,'lambda',lambda,'radius_lim',radius_lim,'n_radius',n_radius,'plot_option',0);
         
         % looping through sessions:
         slopes = zeros(size(n{1},1),length(sess));
