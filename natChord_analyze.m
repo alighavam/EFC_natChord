@@ -102,9 +102,9 @@ switch (what)
     case 'avg_chord_patterns'
         % handling input arguments:
         subject_name = 'subj01';    % subject ID
-        plot = 1;                   % flag to plot the avg chord patterns.
+        plot_option = 1;                   % flag to plot the avg chord patterns.
         normalize_channels = 0;     % flag to whether normalize the channels by their norms or not.
-        vararginoptions(varargin,{'subject_name','plot','normalize_channels'});
+        vararginoptions(varargin,{'subject_name','plot_option','normalize_channels'});
 
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
@@ -123,7 +123,7 @@ switch (what)
         scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
 
         % looping through sessions:
-        if (plot)
+        if (plot_option)
             figure;
         end
         for i = 1:length(sess)
@@ -161,7 +161,7 @@ switch (what)
                 end
             end
             
-            if (plot)
+            if (plot_option)
                 % plotting the chord EMG patterns:
                 subplot(1,2,i)
                 pcolor([[chord_emg_mat{i}, zeros(size(chord_emg_mat{i},1),1)] ; zeros(1,size(chord_emg_mat{i},2)+1)])
@@ -218,7 +218,7 @@ switch (what)
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         
         % calculating avg chord patterns:
-        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot',0,'normalize_channels',normalize_channels);
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',normalize_channels);
         
         % getting avg mean deviation of chords:
         chords_mean_dev = [];
@@ -345,6 +345,7 @@ switch (what)
         subject_name = 'subj01';
         sampling_option = 'whole_sampled';
         vararginoptions(varargin,{'subject_name','sampling_option'});
+
         % set natural EMG file name:
         file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
         
@@ -356,10 +357,6 @@ switch (what)
         scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
 
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
-
-        % defining sessions:
-        sess = {'sess01','sess02'};
-        sess_color = ['k','r'];
 
         % defining sessions:
         sess = {'sess01','sess02'};
@@ -440,6 +437,144 @@ switch (what)
         
         varargout{1} = corr_sess;
 
+    case 'nSphere_numSamples_vs_radius'
+        subject_name = 'subj01';
+        d_type = 'Euclidean';
+        radius_lim = [0,2];
+        n_radius = 100;
+        lambda = [];
+        sampling_option = 'whole_sampled';
+        plot_option = 1;
+        vararginoptions(varargin,{'subject_name','d_type','lambda','radius_lim','n_radius','sampling_option','plot_option'})
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+        
+        % set natural EMG file name:
+        file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
+        
+        % loading natural EMG dists:
+        emg_dist = load(file_name);
+        emg_dist = emg_dist.emg_natural_dist;
+
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
+
+        % normalizing the natural EMGs:
+        for i = 1:length(sess)
+            emg_dist{i} = emg_dist{i} ./ scales(:,i)';
+        end
+
+        % loading subject data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
+        
+        % calculating avg chord patterns:
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1);       
+        
+        % vector of radii:
+        radius_vec = linspace(radius_lim(1),radius_lim(2),n_radius);
+
+        % container for n samples:
+        n_samples = cell(length(sess),1);
+        
+        % looping through sessions:
+        for i = 1:length(sess)
+            n_samples{i} = zeros(length(chords),length(radius_vec));
+            for j = 1:length(chords)
+                fprintf('calculating for session %d , chord %d/%d \n',i,j,length(chords))
+                for r = 1:length(radius_vec)
+                    [n,~] = nSphere_count_samples(emg_dist{i},chord_emg_mat{i}(j,:),radius_vec(r),'d_type',d_type,'lambda',lambda);
+                    n_samples{i}(j,r) = n;
+                end
+            end
+        end
+
+        % plot:
+        if plot_option
+            figure;
+            for i = 1:length(sess)
+                subplot(2,2,i);
+                % single finger chords
+                plot(radius_vec.^size(chord_emg_mat{i},2), n_samples{i}(1:10,:))
+                title(sprintf('sess %d , single finger',i))
+                xlabel(sprintf('r^{%d}',size(chord_emg_mat{i},2)))
+                ylim([0,size(emg_dist{i},1)])
+    
+                subplot(2,2,i+2);
+                % multi finger chords
+                plot(radius_vec.^size(chord_emg_mat{i},2), n_samples{i}(11:end,:))
+                title(sprintf('sess %d , multi finger',i))
+                xlabel(sprintf('r^{%d}',size(chord_emg_mat{i},2)))
+                ylim([0,size(emg_dist{i},1)])
+            end
+        end
+        
+        varargout{1} = n_samples;
+        varargout{2} = radius_vec;
+        
+    case 'nSphere_model'
+        subject_name = 'subj01';
+        d_type = 'Euclidean';
+        radius_lim = [0,1.7];
+        n_radius = 200;
+        lambda = [];
+        sampling_option = 'whole_sampled';
+        vararginoptions(varargin,{'subject_name','d_type','lambda','radius_lim','n_radius','sampling_option'})
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+        
+        % getting num samples vs radius:
+        [n,r] = natChord_analyze('nSphere_numSamples_vs_radius','d_type',d_type,'lambda',lambda,'radius_lim',radius_lim,'n_radius',n_radius,'plot_option',0);
+        
+        % looping through sessions:
+        slopes = zeros(size(n{1},1),length(sess));
+        for i = 1:length(sess)
+            % looping through chords:
+            for j = 1:size(n{i},1)
+                y = n{i}(j,:);
+                
+                % finding the index which the curve is not saturated:
+                nearestIdx = findNearest(y,max(y)/2);
+                
+                % building the regression variables:
+                y = y(1:nearestIdx)';
+                x = r(1:nearestIdx)'.^10;
+
+                % calculating the slope:
+                beta = (x'*x)^-1 * x' * y;
+
+                % saving the slope:
+                slopes(j,i) = beta;
+            end
+        end
+        
+        % loading subject data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
+        
+        [~, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1);
+
+        % getting avg mean deviation of chords:
+        chords_mean_dev = [];
+        for j = 1:length(sess)
+            for i = 1:length(chords)
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                tmp_mean_dev(i) = mean(data.mean_dev(row));
+            end
+            chords_mean_dev(:,j) = tmp_mean_dev;
+        end
+
+        % correlation of multi finger meanDev with the slopes:
+        correlation_within_session = diag(corr(slopes(11:end,:),chords_mean_dev(11:end,:)));
+
+        varargout{1} = correlation_within_session;
+        varargout{2} = slopes;
+
+        
     otherwise
         error('The analysis you entered does not exist!')
 end
