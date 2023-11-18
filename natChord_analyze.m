@@ -424,11 +424,10 @@ switch (what)
         data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
         
         % calculating avg chord patterns:
-        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot',0,'normalize_channels',1);
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1);
         
         % getting avg mean deviation of chords:
         chords_mean_dev = [];
-        c = [];
         for j = 1:length(sess)
             for i = 1:length(chords)
                 row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
@@ -438,10 +437,10 @@ switch (what)
         end
         
         % removing single finger chords:
-        chords_mean_dev(1:10,:) = [];
-        for i = 1:length(sess)
-            chord_emg_mat{i}(1:10,:) = [];
-        end
+        % chords_mean_dev(1:10,:) = [];
+        % for i = 1:length(sess)
+        %     chord_emg_mat{i}(1:10,:) = [];
+        % end
         
         % correlations of mean dev and patterns within each session
         corr_sess = zeros(length(sess),1);
@@ -453,8 +452,10 @@ switch (what)
             figure;
             for i = 1:length(sess)
                 subplot(1,2,i)
-                scatter(chords_mean_dev(:,i), mean(chord_emg_mat{i},2), 50, 'k', 'filled')
-                title(sprintf('sess %s',i))
+                scatter(chords_mean_dev(1:10,i), mean(chord_emg_mat{i}(1:10,:),2), 50, 'r', 'filled')
+                hold on
+                scatter(chords_mean_dev(11:end,i), mean(chord_emg_mat{i}(11:end,:),2), 50, 'k', 'filled')
+                title(sprintf('sess %d',i))
                 xlabel('avg mean deviation')
                 ylabel('avg emg across ch and trial')
                 ylim([0,1])
@@ -462,7 +463,8 @@ switch (what)
             end
         end
         
-        varargout{1} = corr_sess;
+        varargout{1} = chords_mean_dev;
+        varargout{2} = [mean(chord_emg_mat{1},2),mean(chord_emg_mat{2},2)];
 
     case 'nSphere_numSamples_vs_radius'
         subject_name = 'subj01';
@@ -520,6 +522,7 @@ switch (what)
 
         % plot:
         if plot_option
+
             figure;
             for i = 1:length(sess)
                 subplot(2,2,i);
@@ -536,6 +539,28 @@ switch (what)
                 xlabel(sprintf('r^{%d}',size(chord_emg_mat{i},2)))
                 ylim([0,size(emg_dist{i},1)])
             end
+
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i);
+                imagesc(n_samples{i})
+                title(sprintf('sess %d',i))
+
+                colorbar
+                
+                % plot settings:
+                ax = gca;
+                
+                set(ax,'YTick',(1:size(chord_emg_mat{i},1)))
+                set(ax,'YTickLabel',chords)
+                
+                set(ax,'XTick', (1:10:length(radius_vec)))
+                set(ax,'XTickLabel',round(radius_vec(1:10:end),2))
+                
+                set(gca,'YDir','reverse')
+
+                xlabel('radius')
+            end
         end
         
         varargout{1} = n_samples;
@@ -544,11 +569,12 @@ switch (what)
     case 'nSphere_model'
         subject_name = 'subj01';
         d_type = 'Euclidean';
-        radius_lim = [0,1.7];
+        radius_lim = [0,2];
         n_radius = 200;
         lambda = [];
         sampling_option = 'whole_sampled';
-        vararginoptions(varargin,{'subject_name','d_type','lambda','radius_lim','n_radius','sampling_option'})
+        plot_option = 1;
+        vararginoptions(varargin,{'subject_name','d_type','lambda','radius_lim','n_radius','sampling_option','plot_option'})
 
         % defining sessions:
         sess = {'sess01','sess02'};
@@ -598,8 +624,35 @@ switch (what)
         % correlation of multi finger meanDev with the slopes:
         correlation_within_session = diag(corr(slopes(11:end,:),chords_mean_dev(11:end,:)));
 
-        varargout{1} = correlation_within_session;
+        if (plot_option)
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i)
+                scatter(chords_mean_dev(1:10,i), slopes(1:10,i), 50, 'r', 'filled')
+                hold on
+                scatter(chords_mean_dev(11:end,i), slopes(11:end,i), 50, 'k', 'filled')
+                title(sprintf('Slopes , sess %d',i))
+                xlabel('avg mean deviation')
+                ylabel('slopes')
+                xlim([0,5])
+            end
+
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i)
+                scatter(chords_mean_dev(1:10,i), mean(n{i}(1:10,:),2), 50, 'r', 'filled')
+                hold on
+                scatter(chords_mean_dev(11:end,i), mean(n{i}(11:end,:),2), 'k', 'filled')
+                title(sprintf('Avg Count  ,sess %d',i))
+                xlabel('avg mean deviation')
+                ylabel('avg counted number of samples')
+                xlim([0,5])
+            end
+        end
+
+        varargout{1} = chords_mean_dev;
         varargout{2} = slopes;
+        varargout{3} = [mean(n{1},2),mean(n{2},2)];
 
         
     otherwise
