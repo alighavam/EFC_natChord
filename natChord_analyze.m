@@ -654,7 +654,74 @@ switch (what)
         varargout{2} = slopes;
         varargout{3} = [mean(n{1},2),mean(n{2},2)];
 
+    case 'behavioral_model'
+        subject_name = 'subj01';
+        plot_option = 1;
+        vararginoptions(varargin,{'subject_name','plot_option'})
+
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
         
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+
+        [~, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1);
+        
+        % selecting multi finger:
+        chords = chords(11:end);
+
+        % getting avg mean deviation of chords:
+        chords_mean_dev = [];
+        for j = 1:length(sess)
+            for i = 1:length(chords)
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                tmp_mean_dev(i) = mean(data.mean_dev(row));
+            end
+            chords_mean_dev(:,j) = tmp_mean_dev;
+        end
+
+        % single finger model:
+        X = zeros(size(chords,1),10);
+        for i = 1:length(chords)
+            % casting chord to char to loop on fingers:
+            chord_char = num2str(chords(i));
+            
+            % loop on fingers:
+            for j = 1:5
+                if (chord_char(j) == '1')
+                    X(i,j) = 1;
+                elseif (chord_char(j) == '2')
+                    X(i,j+5) = 1;
+                end
+            end
+        end
+
+        % testing the model:
+        y_pred = zeros(size(chords_mean_dev));
+        for i = 1:length(sess)
+            y = chords_mean_dev(:,i);
+            beta = (X'*X)^-1 * X' * y;
+            y_pred(:,i) = X * beta;
+        end
+
+        if plot_option
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i)
+                scatter(chords_mean_dev(:,i), y_pred(:,i), 50, 'k', 'filled')
+                title(sprintf('behavioral model , sess %d',i))
+                xlabel('avg mean deviation')
+                ylabel('predicted')
+                xlim([0,5])
+            end
+
+        end
+
+        varargout{1} = chords_mean_dev;
+        varargout{2} = y_pred;
+
+
     otherwise
         error('The analysis you entered does not exist!')
 end
