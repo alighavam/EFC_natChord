@@ -662,6 +662,79 @@ switch (what)
         varargout{3} = radii;
         varargout{4} = [mean(n{1},2),mean(n{2},2)];
 
+    case 'chord_distance_matrix'
+        subject_name = 'subj01';
+        normalize_channels = 1;
+        vararginoptions(varargin,{'subject_name','normalize_channels'})
+        
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        
+        % calculating avg chord patterns:
+        [chord_emg_mat, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',normalize_channels);
+        
+        % defining sessions:
+        sess = {'sess01','sess02'};
+        sess_blocks = {1:5,6:10};
+
+        % getting avg mean deviation of chords:
+        chords_mean_dev = [];
+        c = [];
+        for j = 1:length(sess)
+            for i = 1:length(chords)
+                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i) & data.sn==str2double(subject_name(end-1:end));
+                tmp_mean_dev(i) = mean(data.mean_dev(row));
+            end
+            chords_mean_dev(:,j) = tmp_mean_dev;
+        end
+        
+        % emg locations:
+        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
+        
+        % distance between muscle patterns:
+        figure; 
+        for i = 1:length(sess)
+            d = squareform(pdist(chord_emg_mat{i}));
+
+            subplot(1,2,i)
+            imagesc(d)
+            colorbar
+            
+            % plot settings:
+            ax = gca;
+            
+            set(ax,'YTick',(1:size(chords,1)))
+            set(ax,'YTickLabel',chords)
+            
+            set(ax,'XTick', (1:size(chords,1)))
+            set(ax,'XTickLabel',chords)
+            
+            set(gca,'YDir','reverse')
+            title(sprintf('emg pattern distance , %s',sess{i}))
+        end
+        
+        figure;
+        for i = 1:length(sess)
+
+            % distance of multi finger chords muscle patterns:
+            d_patterns = pdist(chord_emg_mat{i}(11:end,:))';
+
+            % difference of mean devs to the power of 2:
+            d_MD = pdist(chords_mean_dev(11:end,i))';
+
+            subplot(1,2,i)
+            hold on
+            scatter(d_MD,d_patterns, 50, 'k', 'filled')
+            hold on 
+            plot([0,max([max(d_MD),max(d_patterns)])+0.5], [0,max([max(d_MD),max(d_patterns)])+0.5], 'r', 'LineWidth',0.5)
+            xlim([0,max([max(d_MD),max(d_patterns)])+0.5])
+            ylim([0,max([max(d_MD),max(d_patterns)])+0.5])
+            xlabel('difference of MD')
+            ylabel('difference of muscle patterns')
+
+            title(sess{i})
+        end
+
+        % varargout{1} = pdist(chord_emg_mat{1}')
 
     otherwise
         error('The analysis you entered does not exist!')
