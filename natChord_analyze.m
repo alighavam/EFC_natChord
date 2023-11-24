@@ -289,10 +289,22 @@ switch (what)
         corr_across(1).mf_across_sem = std(corr_mf(corr_mf~=0))/length(corr_mf(corr_mf~=0));
 
         if plot_option
+            X = categorical({'within subjects';'across subjects'});
+            Y = [mean([corr_within.sf_within]),  corr_across.sf_across_avg ; mean([corr_within.mf_within]), corr_across.mf_across_avg];
+            errorplus = [std([corr_within.sf_within])/length([corr_within.sf_within]), corr_across.sf_across_sem ; std([corr_within.mf_within])/length([corr_within.mf_within]), corr_across.mf_across_sem];
+            
+            figure('visible','off'); hBar = bar(Y, 0.8);
+            for k1 = 1:size(Y,2)
+                ctr(k1,:) = hBar(k1).XData + hBar(k1).XOffset;  % Note:  XOffset  Is An Undocumented Feature, This Selects The +bar’ Centres
+                hBar(k1).XOffset
+                ydt(k1,:) = hBar(k1).YData;                     % Individual Bar Heights
+            end
+
             figure;
-            X = ["within subjects","across subjects"];
-            Y = [mean([corr_within.sf_within])  corr_across.sf_across_avg; mean([corr_within.mf_within]) corr_across.mf_across_avg];
-            bar(X,Y)
+            bar(X,Y);      
+            % hold on
+            errorbar(ctr, ydt, errorplus, '.k')
+            set(gca,'XTickLabel',X)
         end
 
         varargout{1} = vectorized_patterns;
