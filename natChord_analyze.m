@@ -119,12 +119,21 @@ switch (what)
         else
             hd_lpf = [];
         end
-
-        subjName = subject_name;
-
-        % Preprocessing and dealing with the natural EMGs:
-        fprintf("Processing natural EMG data...\n\n")
-        make_natural_emg(subjName,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+        
+                
+        % if a cell containing multiple subjects was given:
+        if (iscell(subject_name))
+            for i = 1:length(subject_name)        
+                % Preprocessing and dealing with the natural EMGs:
+                fprintf("Processing natural EMG data...\n\n")
+                make_natural_emg(subject_name{i},fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+            end
+        % if a single subject as a char was given:
+        else
+            % Preprocessing and dealing with the natural EMGs:
+            fprintf("Processing natural EMG data...\n\n")
+            make_natural_emg(subject_name,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+        end
 
     case 'avg_chord_patterns'
         % handling input arguments:
@@ -211,6 +220,86 @@ switch (what)
         fprintf("Corr of pattern matrices across sessions = %.4f\n",corr2(chord_emg_mat{1},chord_emg_mat{2}))
         varargout{1} = chord_emg_mat;
         varargout{2} = chords;
+
+    case 'chord_pattern_corr'
+        plot_option = 1;
+        vararginoptions(varargin,{'plot_option'})
+
+        % getting subject numbers:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        subjects = unique(data.sn);
+
+        % tranforming subject numbers to subject names:
+        subjects = strcat('subj',num2str(subjects,'%02.f'));
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+
+        vectorized_patterns = [];
+        % looping through subjects:
+        for i = 1:size(subjects,1)
+            disp(subjects(i,:))
+            % getting avg chord patterns of subject i:
+            [chord_emg_mat,~] = natChord_analyze('avg_chord_patterns','subject_name',subjects(i,:),'plot_option',0,'normalize_channels',1);
+
+            % vectorizing sujbect emg patterns and concatenating:
+            tmp = cellfun(@(x) reshape(x',1,[])', chord_emg_mat, 'UniformOutput', false);
+
+            % concatenating sessions and subjects:
+            vectorized_patterns = [vectorized_patterns [tmp{:}]];
+        end
+        
+        % single finger:
+        sf_patterns = vectorized_patterns(1:10*size(chord_emg_mat{1},2),:);
+
+        % multi finger:
+        mf_patterns = vectorized_patterns(10*size(chord_emg_mat{1},2)+1:end,:);
+
+        % patterns correlations:
+        corr_sf = triu(corr(sf_patterns),1);
+        corr_mf = triu(corr(mf_patterns),1);
+        
+        % indices of within subject correlations:
+        idx = 1:2:100;
+        idx = idx(1:size(subjects,1));
+        
+        corr_within = [];
+        corr_across = [];
+        % looping through subjects:
+        for i = 1:length(idx)
+            % within subject correlations:
+            % single finger:
+            corr_within(i).sf_within =  corr_sf(idx(i),idx(i)+1);
+
+            % multi finger:
+            corr_within(i).mf_within = corr_mf(idx(i),idx(i)+1);
+            
+            % removing within subject
+            corr_sf(idx(i),idx(i)+1) = 0;
+            corr_mf(idx(i),idx(i)+1) = 0;
+        end
+
+        % across subject correlations mean:
+        % single finger:
+        corr_across(1).sf_across_avg = mean(corr_sf(corr_sf~=0));
+        corr_across(1).sf_across_sem = std(corr_sf(corr_sf~=0))/length(corr_sf(corr_sf~=0));
+
+        % multi finger:
+        corr_across(1).mf_across_avg = mean(corr_mf(corr_mf~=0));
+        corr_across(1).mf_across_sem = std(corr_mf(corr_mf~=0))/length(corr_mf(corr_mf~=0));
+
+        if plot_option
+            figure;
+            X = ["within subjects","across subjects"];
+            Y = [mean([corr_within.sf_within])  corr_across.sf_across_avg; mean([corr_within.mf_within]) corr_across.mf_across_avg];
+            bar(X,Y)
+        end
+
+        varargout{1} = vectorized_patterns;
+        varargout{2} = corr_within;
+        varargout{3} = corr_across;
+        
+
     
     case 'visualize_natural_emg'
         % handling input arguments:
