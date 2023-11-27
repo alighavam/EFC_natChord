@@ -228,7 +228,7 @@ switch (what)
         % getting subject numbers:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         subjects = unique(data.sn);
-
+        
         % tranforming subject numbers to subject names:
         subjects = strcat('subj',num2str(subjects,'%02.f'));
 
@@ -302,6 +302,100 @@ switch (what)
         varargout{2} = corr_within;
         varargout{3} = corr_across;
     
+    case 'behavior_reliability'
+        plot_option = 1;
+        vararginoptions(varargin,{'plot_option'})
+
+        % getting subject numbers:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        subjects = unique(data.sn);
+
+        % defining sessions:
+        sess = {'sess01','sess02'};
+
+        cat_MD = [];
+        % looping through subjects:
+        for sn = 1:size(subjects,1)    
+            % getting avg mean deviation of chords:
+            chords_mean_dev = [];
+            for j = 1:length(sess)
+                chords = unique(data.chordID(sess_rows));
+            
+                % sorting chords in an arbitrary way:
+                chords_sorted = [19999, 91999, 99199, 99919, 99991, 29999, 92999, 99299, 99929, 99992];
+                [ind,~] = find(chords == chords_sorted);
+                chords = [chords_sorted'; chords(setdiff(1:length(chords),ind))];
+                for i = 1:length(chords)
+                    row = data.sn==subjects(sn) & data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
+                    tmp_mean_dev(i) = mean(data.mean_dev(row));
+                    
+                end
+                chords_mean_dev(:,j) = tmp_mean_dev;
+            end
+        
+            % getting avg chord patterns of subject i:
+            [chord_emg_mat,~] = natChord_analyze('avg_chord_patterns','subject_name',subjects(i,:),'plot_option',0,'normalize_channels',1);
+
+            % vectorizing sujbect emg patterns and concatenating:
+            tmp = cellfun(@(x) reshape(x',1,[])', chord_emg_mat, 'UniformOutput', false);
+
+            % concatenating sessions and subjects:
+            vectorized_patterns = [vectorized_patterns [tmp{:}]];
+        end
+        
+        % single finger:
+        sf_patterns = vectorized_patterns(1:10*size(chord_emg_mat{1},2),:);
+
+        % multi finger:
+        mf_patterns = vectorized_patterns(10*size(chord_emg_mat{1},2)+1:end,:);
+
+        % patterns correlations:
+        corr_sf = triu(corr(sf_patterns),1);
+        corr_mf = triu(corr(mf_patterns),1);
+        
+        % indices of within subject correlations:
+        idx = 1:2:100;
+        idx = idx(1:size(subjects,1));
+        
+        corr_within = [];
+        corr_across = [];
+        % looping through subjects:
+        for i = 1:length(idx)
+            % within subject correlations:
+            % single finger:
+            corr_within(i).sf_within =  corr_sf(idx(i),idx(i)+1);
+
+            % multi finger:
+            corr_within(i).mf_within = corr_mf(idx(i),idx(i)+1);
+            
+            % removing within subject
+            corr_sf(idx(i),idx(i)+1) = 0;
+            corr_mf(idx(i),idx(i)+1) = 0;
+        end
+
+        % across subject correlations mean:
+        % single finger:
+        corr_across(1).sf_across_avg = mean(corr_sf(corr_sf~=0));
+        corr_across(1).sf_across_sem = std(corr_sf(corr_sf~=0))/length(corr_sf(corr_sf~=0));
+
+        % multi finger:
+        corr_across(1).mf_across_avg = mean(corr_mf(corr_mf~=0));
+        corr_across(1).mf_across_sem = std(corr_mf(corr_mf~=0))/length(corr_mf(corr_mf~=0));
+
+        if plot_option
+            X = {'within subjects','across subjects'};
+            Y = [mean([corr_within.sf_within]),  corr_across.sf_across_avg ; mean([corr_within.mf_within]), corr_across.mf_across_avg];
+            errorplus = [std([corr_within.sf_within])/length([corr_within.sf_within]), corr_across.sf_across_sem ; std([corr_within.mf_within])/length([corr_within.mf_within]), corr_across.mf_across_sem];
+            
+            figure;
+            bar_SEM(Y,errorplus,'type','dashplot','xtick_labels',X,'line_groups',0)
+            % set(gca,'XTickLabel',X)
+        end
+
+        varargout{1} = vectorized_patterns;
+        varargout{2} = corr_within;
+        varargout{3} = corr_across;
+
     case 'visualize_natural_emg'
         % handling input arguments:
         sampling_option = 'whole_sampled';
@@ -541,15 +635,16 @@ switch (what)
         if (plot_option)
             figure;
             for i = 1:length(sess)
-                subplot(1,2,i)
-                scatter(chords_mean_dev(1:10,i), mean(chord_emg_mat{i}(1:10,:),2), 50, 'r', 'filled')
+                subplot(2,1,i)
                 hold on
-                scatter(chords_mean_dev(11:end,i), mean(chord_emg_mat{i}(11:end,:),2), 50, 'k', 'filled')
+                scatter_corr(chords_mean_dev(1:10,i), mean(chord_emg_mat{i}(1:10,:),2), 'r', 'o')
+                hold on
+                scatter_corr(chords_mean_dev(11:end,i), mean(chord_emg_mat{i}(11:end,:),2), 'k', 'filled')
                 title(sprintf('sess %d',i))
                 xlabel('avg mean deviation')
                 ylabel('avg emg across ch and trial')
                 ylim([0,1])
-                xlim([0,5])
+                xlim([0,4])
             end
         end
         
@@ -612,7 +707,6 @@ switch (what)
 
         % plot:
         if plot_option
-
             figure;
             for i = 1:length(sess)
                 subplot(2,2,i);
@@ -692,10 +786,10 @@ switch (what)
                 % building the regression variables:
                 y = y(1:thresh_idx)';
                 x = r(1:thresh_idx)';
-
+                
                 % OLS regression:
                 beta = (x'*x)^-1 * x' * y;
-
+                
                 % saving the slope:
                 slopes(j,i) = beta;
                 radii(j,i) = x(end);
@@ -725,25 +819,40 @@ switch (what)
             figure;
             for i = 1:length(sess)
                 subplot(1,2,i)
-                scatter(chords_mean_dev(1:10,i), slopes(1:10,i), 50, 'r', 'filled')
                 hold on
-                scatter(chords_mean_dev(11:end,i), slopes(11:end,i), 50, 'k', 'filled')
-                title(sprintf('Slopes , sess %d',i))
+                scatter_corr(chords_mean_dev(1:10,i), slopes(1:10,i), 'r', 'o')
+                hold on
+                scatter_corr(chords_mean_dev(11:end,i), slopes(11:end,i), 'k', 'o')
+                title(sprintf('Slopes , thresh = %d  , sess %d',num_sample_thresh,i))
                 xlabel('avg mean deviation')
                 ylabel('slopes')
-                xlim([0,5])
+                xlim([0,4])
             end
 
             figure;
             for i = 1:length(sess)
                 subplot(1,2,i)
-                scatter(chords_mean_dev(1:10,i), mean(n{i}(1:10,:),2), 50, 'r', 'filled')
                 hold on
-                scatter(chords_mean_dev(11:end,i), mean(n{i}(11:end,:),2), 'k', 'filled')
-                title(sprintf('Avg Count  ,sess %d',i))
+                scatter_corr(chords_mean_dev(1:10,i), radii(1:10,i), 'r', 'filled')
+                hold on
+                scatter_corr(chords_mean_dev(11:end,i), radii(11:end,i), 'k', 'filled')
+                title(sprintf('radius vs MD , thresh = %d , sess %d',num_sample_thresh,i))
+                xlabel('avg mean deviation')
+                ylabel('radius at count threshold')
+                xlim([0,4])
+            end
+
+            figure;
+            for i = 1:length(sess)
+                subplot(1,2,i)
+                hold on
+                scatter_corr(chords_mean_dev(1:10,i), mean(n{i}(1:10,:),2), 'r', 'filled')
+                hold on
+                scatter_corr(chords_mean_dev(11:end,i), mean(n{i}(11:end,:),2), 'k', 'filled')
+                title(sprintf('Avg Count , sess %d',i))
                 xlabel('avg mean deviation')
                 ylabel('avg counted number of samples')
-                xlim([0,5])
+                xlim([0,4])
             end
         end
 
@@ -820,7 +929,7 @@ switch (what)
             ylim([0,max([max(d_MD),max(d_patterns)])+0.5])
             xlabel('difference of MD')
             ylabel('difference of muscle patterns')
-
+            
             title(sess{i})
         end
 
