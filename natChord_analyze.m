@@ -612,7 +612,6 @@ switch (what)
 
         % plot:
         if plot_option
-
             figure;
             for i = 1:length(sess)
                 subplot(2,2,i);
@@ -655,71 +654,78 @@ switch (what)
         
         varargout{1} = n_samples;
         varargout{2} = radius_vec;
-        
+
     case 'nSphere_model'
-        subject_name = 'subj01';
         d_type = 'Euclidean';
-        radius_lim = [0,2];
-        n_radius = 200;
         lambda = [];
-        num_sample_thresh = 30;
+        num_sample_thresh = 10;
         sampling_option = 'whole_sampled';
         plot_option = 1;
-        vararginoptions(varargin,{'subject_name','d_type','lambda','radius_lim','n_radius','sampling_option','num_sample_thresh','plot_option'})
+        vararginoptions(varargin,{'d_type','lambda','radius_lim','n_radius','sampling_option','num_sample_thresh','plot_option'})
         
         % defining sessions:
         sess = {'sess01','sess02'};
         sess_blocks = {1:5,6:10};
         
-        % getting num samples vs radius:
-        [n,r] = natChord_analyze('nSphere_numSamples_vs_radius','sampling_option',sampling_option,'d_type',d_type,'lambda',lambda,'radius_lim',radius_lim,'n_radius',n_radius,'plot_option',0);
-        
-        % looping through sessions:
-        slopes = zeros(size(n{1},1),length(sess));
-        radii = zeros(size(slopes));
-        for i = 1:length(sess)
-            % looping through chords:
-            for j = 1:size(n{i},1)
-                y = n{i}(j,:);
-                
-                % finding the index which the number of samples gets to num_sample_thresh:
-                thresh_idx = find(y<=num_sample_thresh);
-                if (isempty(thresh_idx))
-                    error('nSphere_model: Could not find any values with num_sample_thresh. Check num_sample_thresh and radius_lim')
-                end
-                thresh_idx = thresh_idx(end);
-                
-                % building the regression variables:
-                y = y(1:thresh_idx)';
-                x = r(1:thresh_idx)';
-
-                % OLS regression:
-                beta = (x'*x)^-1 * x' * y;
-
-                % saving the slope:
-                slopes(j,i) = beta;
-                radii(j,i) = x(end);
-            end
-        end
-        
-        % loading subject data:
+        % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
-        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
         
-        [~, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1);
+        % subject numbers:
+        subjects = unique(data.sn);
 
-        % getting avg mean deviation of chords:
-        chords_mean_dev = [];
-        for j = 1:length(sess)
-            for i = 1:length(chords)
-                row = data.BN>=sess_blocks{j}(1) & data.BN<=sess_blocks{j}(end) & data.trialCorr==1 & data.chordID==chords(i);
-                tmp_mean_dev(i) = mean(data.mean_dev(row));
+        % tranforming subject numbers to subject names:
+        subject_names = strcat('subj',num2str(subjects,'%02.f'));
+
+        % container for the dataframe:
+        C = [];
+        for sn = 1:length(subjects)
+            % set natural EMG file name:
+            file_name = fullfile(project_path, 'analysis', ['natChord_' subject_names(sn,:) '_emg_natural_' sampling_option '.mat']);
+            
+            % loading natural EMG dists:
+            emg_dist = load(file_name);
+            emg_dist = emg_dist.emg_natural_dist;
+    
+            % scaling factors:
+            scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_names(sn,:));
+    
+            % normalizing the natural EMGs:
+            for i = 1:length(sess)
+                emg_dist{i} = emg_dist{i} ./ scales(:,i)';
             end
-            chords_mean_dev(:,j) = tmp_mean_dev;
-        end
 
-        % correlation of multi finger meanDev with the slopes:
-        correlation_within_session = diag(corr(slopes(11:end,:),chords_mean_dev(11:end,:)));
+            [avg_patterns, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_names(sn,:),'plot_option',0,'normalize_channels',1);
+
+            % looping through sessions:
+            for i = 1:length(sess)
+                % container for the each session's dataframe:
+                tmp = [];
+
+                % getting avg mean deviation of chords:
+                chords_mean_dev = zeros(length(chords),1);
+                for j = 1:length(chords)
+                    row = data.sn==subjects(sn) & data.BN>=sess_blocks{i}(1) & data.BN<=sess_blocks{i}(end) & data.trialCorr==1 & data.chordID==chords(j);
+                    chords_mean_dev(j) = mean(data.mean_dev(row));
+                end
+    
+                for j = 1:length(chords)
+                    % sorted distances from the natural dist:
+                    d = get_d_from_natural(avg_patterns{i}(j,:)',emg_dist{i},'d_type',d_type,'lambda',lambda);
+    
+                    % storing the information:
+                    tmp.sn(j,1) = subjects(sn);
+                    tmp.sess(j,1) = i;
+                    tmp.chordID(j,1) = chords(j);
+                    tmp.MD(j,1) = chords_mean_dev(j);
+                    tmp.thresh(j,1) = num_sample_thresh;
+                    tmp.d(j,1) = d(num_sample_thresh);
+                    tmp.slope(j,1) = num_sample_thresh/d(num_sample_thresh)^10;
+                    tmp.log_slope(j,1) = log(num_sample_thresh/d(num_sample_thresh)^10);
+                end
+
+                C = addstruct(C,tmp,'row','force');
+            end
+        end
 
         if (plot_option)
             figure;
@@ -747,10 +753,7 @@ switch (what)
             end
         end
 
-        varargout{1} = chords_mean_dev;
-        varargout{2} = slopes;
-        varargout{3} = radii;
-        varargout{4} = [mean(n{1},2),mean(n{2},2)];
+        varargout{1} = C;
 
     case 'chord_distance_matrix'
         subject_name = 'subj01';
