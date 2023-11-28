@@ -153,6 +153,9 @@ switch sampling_option
         % Creating the sampling intervals:
         intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
         intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
+        
+        % selecting the sample intervals:
+        intervals = intervals(1:wn_spacing:end,:);
 
         % sampling the natural EMGs:
         sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
@@ -162,25 +165,27 @@ switch sampling_option
             tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
             sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
         end
-        
-        % avg of all samples:
-        sampled_avg = mean(sampled_emg,1);
 
-        % sampling the sampled EMGs based on mean threshold:
-
-        % indices for each electrode that are more than their avg:
-        ind = sampled_emg >= sampled_avg;
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_info.participant_id{1});
         
-        % inding the selected samples for each electrode:
-        selected_samples = [];
-        for i = 1:size(ind,2)
-            selected_samples = [selected_samples ; find(ind(:,i))];
+        if (normalize_channels)
+            % normalizing the natural EMGs:
+            emg_dist{i} = emg_dist{i} ./ scales(:,i)';
         end
+        
+        % Norm of all samples:
+        samples_norm = vecnorm(sampled_emg');
 
-        % finding the selected samples across electrodes:
-        selected_samples = unique(selected_samples);
+        % avg of the norms:
+        avg_norm = mean(samples_norm);
 
-        sampled_emg = sampled_emg(selected_samples,:);
+        % sampling the sampled EMGs based on mean norm threshold:
+        % indices for each electrode that are more than their avg:
+        ind = samples_norm >= avg_norm;
+
+        % sub sampling:
+        sampled_emg = sampled_emg(ind,:);
 
     case 'peaks'
 

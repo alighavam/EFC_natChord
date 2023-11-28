@@ -170,7 +170,6 @@ switch (what)
         end
 
 
-
     case 'avg_chord_patterns'
         % handling input arguments:
         subject_name = 'subj01';    % subject ID
