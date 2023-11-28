@@ -753,10 +753,10 @@ switch (what)
     case 'nSphere_model'
         d_type = 'Euclidean';
         lambda = [];
-        num_sample_thresh = 10;
+        n_thresh = 10;
         sampling_option = 'whole_sampled';
         plot_option = 1;
-        vararginoptions(varargin,{'d_type','lambda','radius_lim','n_radius','sampling_option','num_sample_thresh','plot_option'})
+        vararginoptions(varargin,{'d_type','lambda','sampling_option','n_thresh','plot_option'})
         
         % defining sessions:
         sess = {'sess01','sess02'};
@@ -767,7 +767,7 @@ switch (what)
         
         % subject numbers:
         subjects = unique(data.sn);
-
+        
         % tranforming subject numbers to subject names:
         subject_names = strcat('subj',num2str(subjects,'%02.f'));
 
@@ -780,7 +780,7 @@ switch (what)
             % loading natural EMG dists:
             emg_dist = load(file_name);
             emg_dist = emg_dist.emg_natural_dist;
-    
+            
             % scaling factors:
             scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_names(sn,:));
     
@@ -812,10 +812,10 @@ switch (what)
                     tmp.sess(j,1) = i;
                     tmp.chordID(j,1) = chords(j);
                     tmp.MD(j,1) = chords_mean_dev(j);
-                    tmp.thresh(j,1) = num_sample_thresh;
-                    tmp.d(j,1) = d(num_sample_thresh);
-                    tmp.slope(j,1) = num_sample_thresh/d(num_sample_thresh)^10;
-                    tmp.log_slope(j,1) = log(num_sample_thresh/d(num_sample_thresh)^10);
+                    tmp.thresh(j,1) = n_thresh;
+                    tmp.d(j,1) = d(n_thresh);
+                    tmp.slope(j,1) = n_thresh/d(n_thresh)^10;
+                    tmp.log_slope(j,1) = log(n_thresh/d(n_thresh)^10);
                 end
 
                 C = addstruct(C,tmp,'row','force');
@@ -823,43 +823,54 @@ switch (what)
         end
 
         if (plot_option)
-            figure;
-            for i = 1:length(sess)
-                subplot(1,2,i)
-                hold on
-                scatter_corr(chords_mean_dev(1:10,i), slopes(1:10,i), 'r', 'o')
-                hold on
-                scatter_corr(chords_mean_dev(11:end,i), slopes(11:end,i), 'k', 'o')
-                title(sprintf('Slopes , thresh = %d  , sess %d',num_sample_thresh,i))
-                xlabel('avg mean deviation')
-                ylabel('slopes')
-                xlim([0,4])
-            end
-
-            figure;
-            for i = 1:length(sess)
-                subplot(1,2,i)
-                hold on
-                scatter_corr(chords_mean_dev(1:10,i), radii(1:10,i), 'r', 'filled')
-                hold on
-                scatter_corr(chords_mean_dev(11:end,i), radii(11:end,i), 'k', 'filled')
-                title(sprintf('radius vs MD , thresh = %d , sess %d',num_sample_thresh,i))
-                xlabel('avg mean deviation')
-                ylabel('radius at count threshold')
-                xlim([0,4])
-            end
-
-            figure;
-            for i = 1:length(sess)
-                subplot(1,2,i)
-                hold on
-                scatter_corr(chords_mean_dev(1:10,i), mean(n{i}(1:10,:),2), 'r', 'filled')
-                hold on
-                scatter_corr(chords_mean_dev(11:end,i), mean(n{i}(11:end,:),2), 'k', 'filled')
-                title(sprintf('Avg Count , sess %d',i))
-                xlabel('avg mean deviation')
-                ylabel('avg counted number of samples')
-                xlim([0,4])
+            for sn = 1:length(subjects)
+                figure;
+                for i = 1:length(sess)
+                    x = C.MD(C.sn==subjects(sn) & C.sess==i);
+                    y = C.slope(C.sn==subjects(sn) & C.sess==i);
+                    subplot(1,2,i)
+                    hold on
+                    scatter_corr(x(1:10), y(1:10), 'r', 'o')
+                    hold on
+                    scatter_corr(x(11:end), y(11:end), 'k', 'o')
+                    title(sprintf('Slopes , thresh = %d  , sess %d',C.thresh(1),i))
+                    xlabel('avg MD')
+                    ylabel('slopes')
+                    xlim([0,4])
+                end
+                sgtitle(sprintf(subject_names(sn,:)))
+                
+                figure;
+                for i = 1:length(sess)
+                    x = C.MD(C.sn==subjects(sn) & C.sess==i);
+                    y = C.d(C.sn==subjects(sn) & C.sess==i);
+                    subplot(1,2,i)
+                    hold on
+                    scatter_corr(x(1:10), y(1:10), 'r', 'filled')
+                    hold on
+                    scatter_corr(x(11:end), y(11:end), 'k', 'filled')
+                    title(sprintf('thresh = %d , sess %d',C.thresh(1),i))
+                    xlabel('avg MD')
+                    ylabel('d at count threshold')
+                    xlim([0,4])
+                end
+                sgtitle(subject_names(sn,:))
+    
+                figure;
+                for i = 1:length(sess)
+                    x = C.MD(C.sn==subjects(sn) & C.sess==i);
+                    y = C.log_slope(C.sn==subjects(sn) & C.sess==i);
+                    subplot(1,2,i)
+                    hold on
+                    scatter_corr(x(1:10), y(1:10,:), 'r', 'filled')
+                    hold on
+                    scatter_corr(x(11:end), y(11:end,:), 'k', 'filled')
+                    title(sprintf('log(slope) , thresh = %d , sess %d',C.thresh(1),i))
+                    xlabel('avg mean deviation')
+                    ylabel('log(slope)')
+                    xlim([0,4])
+                end
+                sgtitle(subject_names(sn,:))
             end
         end
 
