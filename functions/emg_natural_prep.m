@@ -166,16 +166,16 @@ switch sampling_option
             sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
         end
 
+        tmp_sample = sampled_emg;
+
         % scaling factors:
         scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_info.participant_id{1});
         
-        if (normalize_channels)
-            % normalizing the natural EMGs:
-            emg_dist{i} = emg_dist{i} ./ scales(:,i)';
-        end
+        % normalizing the natural EMGs:
+        tmp_sample = tmp_sample ./ scales(:,str2double(sess(end-1:end)))';
         
         % Norm of all samples:
-        samples_norm = vecnorm(sampled_emg');
+        samples_norm = vecnorm(tmp_sample');
 
         % avg of the norms:
         avg_norm = mean(samples_norm);
