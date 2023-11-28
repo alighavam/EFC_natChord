@@ -135,6 +135,42 @@ switch (what)
             make_natural_emg(subject_name,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
         end
 
+    case 'natural_emg_autocorr'
+        subject_name = 'subj01';
+        wn_size = 5; % win size for the natural data in ms.
+        vararginoptions(varargin,{'subject_name','wn_size'})
+
+        sess = {'sess01','sess02'};
+        
+        % load whole emg:
+        emg_nat = load(fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_whole.mat']));
+        emg_nat = emg_nat.emg_natural_dist;
+        
+        figure;
+        for i = 1:length(sess)
+            a_avg = 0;
+            for ch = 1:size(emg_nat{i},2)
+                [a,lags] = autocorr(emg_nat{i}(:,ch),NumLags=1000); 
+                a_avg = a_avg + a/size(emg_nat{i},2);
+
+                subplot(2,1,i)
+                plot(lags*wn_size,a,'LineWidth',0.1)
+                hold on
+                % ylim([0,1])
+                xlabel('lag (ms)')
+                ylabel('corr')
+                title(sess{i})
+            end
+            plot(lags*wn_size,a_avg,'k','LineWidth',2);
+            hold on;
+            yline(0)
+            idx = findNearest(a_avg,0.2);
+            plot([idx*wn_size idx*wn_size],[0 a_avg(idx)],':k','LineWidth',2)
+            plot([0 idx*wn_size],[a_avg(idx) a_avg(idx)],':k','LineWidth',2)
+        end
+
+
+
     case 'avg_chord_patterns'
         % handling input arguments:
         subject_name = 'subj01';    % subject ID
