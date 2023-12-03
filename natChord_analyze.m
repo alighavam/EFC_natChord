@@ -1011,7 +1011,7 @@ switch (what)
         % distance of EMG channels:
         d_emg = [];
         for i = 1:length(sess)
-            d_emg{i} = squareform(pdist(emg_dist{i}(:,6:10)'));
+            d_emg{i} = squareform(pdist(emg_dist{i}'));
         end
         
         figure;
