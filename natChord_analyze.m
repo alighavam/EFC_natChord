@@ -985,6 +985,44 @@ switch (what)
 
         % varargout{1} = pdist(chord_emg_mat{1}')
 
+    case 'natural_distance_RDM'
+        % handling input arguments:
+        sampling_option = 'whole_sampled';
+        subject_name = 'subj01';
+        vararginoptions(varargin,{'subject_name','sampling_option'});
+
+        % set natural EMG file name:
+        file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
+        
+        % loading natural EMG dists:
+        emg_dist = load(file_name);
+        emg_dist = emg_dist.emg_natural_dist;
+
+        % scaling factors:
+        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_name);
+
+        sess = {'sess01','sess02'};
+
+        % normalizing the natural EMGs:
+        for i = 1:length(sess)
+            emg_dist{i} = emg_dist{i} ./ scales(:,i)';
+        end
+        
+        % distance of EMG channels:
+        d_emg = [];
+        for i = 1:length(sess)
+            d_emg{i} = squareform(pdist(emg_dist{i}(:,6:10)'));
+        end
+        
+        figure;
+        imagesc(d_emg{1})
+        colormap('hot')
+        colorbar
+        figure;
+        imagesc(d_emg{2})
+        colormap('hot')
+        colorbar
+
     otherwise
         error('The analysis you entered does not exist!')
 end
