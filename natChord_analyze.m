@@ -681,6 +681,18 @@ switch (what)
                 ylim([0,1])
                 xlim([0,4])
             end
+
+            figure;
+            for i = 1:length(sess)
+                subplot(2,1,i)
+                hold on
+                scatter_corr(chords_mean_dev(:,i), mean(chord_emg_mat{i}(:,:),2), 'k', 'o')
+                title(sprintf('sess %d',i))
+                xlabel('avg mean deviation')
+                ylabel('avg emg across ch and trial')
+                ylim([0,1])
+                xlim([0,4])
+            end
         end
         
         varargout{1} = chords_mean_dev;
@@ -865,13 +877,13 @@ switch (what)
                     y = C.slope(C.sn==subjects(sn) & C.sess==i);
                     subplot(1,2,i)
                     hold on
-                    scatter_corr(x(1:10), y(1:10), 'r', 'o')
+                    scatter_corr(y(1:10) ,x(1:10), 'r', 'o')
                     hold on
-                    scatter_corr(x(11:end), y(11:end), 'k', 'o')
+                    scatter_corr(y(11:end), x(11:end), 'k', 'o')
                     title(sprintf('Slopes , thresh = %d  , sess %d',C.thresh(1),i))
-                    xlabel('avg MD')
-                    ylabel('slopes')
-                    xlim([0,4])
+                    xlabel('slopes')
+                    ylabel('avg MD')
+                    ylim([0,4])
                 end
                 sgtitle(sprintf(subject_names(sn,:)))
                 
@@ -881,13 +893,13 @@ switch (what)
                     y = C.d(C.sn==subjects(sn) & C.sess==i);
                     subplot(1,2,i)
                     hold on
-                    scatter_corr(x(1:10), y(1:10), 'r', 'filled')
+                    scatter_corr(y(1:10), x(1:10), 'r', 'filled')
                     hold on
-                    scatter_corr(x(11:end), y(11:end), 'k', 'filled')
+                    scatter_corr(y(11:end), x(11:end), 'k', 'filled')
                     title(sprintf('thresh = %d , sess %d',C.thresh(1),i))
-                    xlabel('avg MD')
-                    ylabel('d at count threshold')
-                    xlim([0,4])
+                    xlabel('d at count threshold')
+                    ylabel('avg MD')
+                    ylim([0,4])
                 end
                 sgtitle(subject_names(sn,:))
     
@@ -897,13 +909,13 @@ switch (what)
                     y = C.log_slope(C.sn==subjects(sn) & C.sess==i);
                     subplot(1,2,i)
                     hold on
-                    scatter_corr(x(1:10), y(1:10,:), 'r', 'filled')
+                    scatter_corr(y(1:10,:), x(1:10), 'r', 'filled')
                     hold on
-                    scatter_corr(x(11:end), y(11:end,:), 'k', 'filled')
+                    scatter_corr(y(11:end,:), x(11:end), 'k', 'filled')
                     title(sprintf('log(slope) , thresh = %d , sess %d',C.thresh(1),i))
-                    xlabel('avg mean deviation')
-                    ylabel('log(slope)')
-                    xlim([0,4])
+                    xlabel('log(slope)')
+                    ylabel('avg mean deviation')
+                    ylim([0,4])
                 end
                 sgtitle(subject_names(sn,:))
             end
