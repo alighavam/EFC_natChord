@@ -35,7 +35,7 @@ switch (what)
                          'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
         end
     
-    case 'make_analysis_data'
+    case 'make_trial_dataframe'
         % Calculate RT, MT, Mean Deviation for each trial of each subejct
         % and create a struct without the mov signals and save it as a
         % single struct called efc1_all.mat
