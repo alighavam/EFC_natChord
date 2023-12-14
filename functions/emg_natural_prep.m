@@ -137,8 +137,11 @@ switch sampling_option
         intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
         intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
         
-        % selecting the sample intervals:
-        intervals = intervals(1:wn_spacing:end,:);
+        
+        for i = 1:wn_spacing-1
+            % selecting the sample intervals:
+            intervals = intervals(1:wn_spacing:end,:);
+        end
 
         % sampling the natural EMGs:
         sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
