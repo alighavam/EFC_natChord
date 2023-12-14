@@ -119,7 +119,6 @@ switch (what)
         else
             hd_lpf = [];
         end
-        
                 
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
