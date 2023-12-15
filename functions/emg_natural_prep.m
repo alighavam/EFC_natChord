@@ -1,4 +1,4 @@
-function sampled_emg = emg_natural_prep(subject_info,emg_data, sess, fs, hd, hd_lpf, wn_type, wn_size, sampling_option, wn_spacing)
+function dist = emg_natural_prep(subject_info,emg_data, sess, fs, hd, hd_lpf, wn_type, wn_size, sampling_option, wn_spacing)
 % Description:
 %   wn_size is in ms. 
 %   wn_type is 'Gaussian' or 'Rect'
@@ -117,6 +117,9 @@ else
     error('emg_natural_prep: wn_type %s does not exist.',wn_type)
 end
 
+
+% dataframe to hold dist:
+dist = [];
 switch sampling_option
     case 'whole'
         % Creating the sampling intervals:
@@ -131,25 +134,31 @@ switch sampling_option
             tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
             sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
         end
+        dist.partition(1,1) = 1;
+        dist.dist{1,1} = sampled_emg;
 
     case 'whole_sampled'
         % Creating the sampling intervals:
         intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
         intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
         
-        
-        for i = 1:wn_spacing-1
+        % loop on partitions:
+        for i = 1:wn_spacing
             % selecting the sample intervals:
-            intervals = intervals(1:wn_spacing:end,:);
-        end
+            intervals_tmp = intervals(i:wn_spacing:end,:);
 
-        % sampling the natural EMGs:
-        sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
+            % sampling the natural EMGs:
+            sampled_emg = zeros(size(intervals_tmp,1),size(emg_data_selected,2));
+    
+            for j = 1:size(intervals_tmp,1)
+                % windowing the interval:
+                tmp = emg_data_selected(intervals_tmp(j,1):intervals_tmp(j,2),:) .* wn;
+                sampled_emg(j,:) = sum(tmp,1)./sum(wn,1);
+            end
 
-        for i = 1:size(intervals,1)
-            % windowing the interval:
-            tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
-            sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
+            dist.sess(i,1) = str2double(sess(end-1:end));
+            dist.partition(i,1) = i;
+            dist.dist{i,1} = sampled_emg;
         end
 
     case 'whole_thresholded'
@@ -157,38 +166,48 @@ switch sampling_option
         intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
         intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
         
-        % selecting the sample intervals:
-        intervals = intervals(1:wn_spacing:end,:);
+        % loop on partitions:
+        for i = 1:wn_spacing
+            % selecting the sample intervals:
+            intervals_tmp = intervals(i:wn_spacing:end,:);
 
-        % sampling the natural EMGs:
-        sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
+            % sampling the natural EMGs:
+            sampled_emg = zeros(size(intervals_tmp,1),size(emg_data_selected,2));
+    
+            for j = 1:size(intervals_tmp,1)
+                % windowing the interval:
+                tmp = emg_data_selected(intervals_tmp(j,1):intervals_tmp(j,2),:) .* wn;
+                sampled_emg(j,:) = sum(tmp,1)./sum(wn,1);
+            end
 
-        for i = 1:size(intervals,1)
-            % windowing the interval:
-            tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
-            sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
+            % thresholding based on norm of channels after scaling:
+            tmp_sample = sampled_emg;
+
+            % scaling factors:
+            scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_info.participant_id{1});
+            
+            % normalizing the natural EMGs:
+            tmp_sample = tmp_sample ./ scales(:,str2double(sess(end-1:end)))';
+            
+            % Norm of all samples:
+            samples_norm = vecnorm(tmp_sample');
+    
+            % avg of the norms:
+            avg_norm = mean(samples_norm);
+    
+            % sampling the sampled EMGs based on mean norm threshold:
+            % indices for each electrode that are more than their avg:
+            ind = samples_norm >= avg_norm;
+    
+            % sub sampling:
+            sampled_emg = sampled_emg(ind,:);
+
+            dist.sess(i,1) = str2double(sess(end-1:end));
+            dist.partition(i,1) = i;
+            dist.dist{i,1} = sampled_emg;
         end
 
-        tmp_sample = sampled_emg;
-
-        % scaling factors:
-        scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_info.participant_id{1});
         
-        % normalizing the natural EMGs:
-        tmp_sample = tmp_sample ./ scales(:,str2double(sess(end-1:end)))';
-        
-        % Norm of all samples:
-        samples_norm = vecnorm(tmp_sample');
-
-        % avg of the norms:
-        avg_norm = mean(samples_norm);
-
-        % sampling the sampled EMGs based on mean norm threshold:
-        % indices for each electrode that are more than their avg:
-        ind = samples_norm >= avg_norm;
-
-        % sub sampling:
-        sampled_emg = sampled_emg(ind,:);
 
     case 'peaks'
 

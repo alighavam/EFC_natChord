@@ -17,7 +17,7 @@ subj_info = dload(participants_tsv);
 
 % looping through raw natural emg files:
 sess = {'sess01','sess02'};
-emg_natural_dist = cell(length(sess),1);
+emg_natural_dist = [];
 for i = 1:length(sess)
     fprintf('loading raw natural EMG file %d\n\n',i)
     
@@ -27,7 +27,8 @@ for i = 1:length(sess)
     % call emg_natural_prep function:
     sampled_emg = emg_natural_prep(getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), emg_data, sess{i}, fs_emg, hd, hd_lpf, ...
         wn_type, wn_size, sampling_option, wn_spacing);
-    emg_natural_dist{i} = sampled_emg;
+    
+    emg_natural_dist = addstruct(emg_natural_dist,sampled_emg,'row','force');
 end
 
 save(nat_emgFileName,'emg_natural_dist')
