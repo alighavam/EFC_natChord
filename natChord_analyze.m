@@ -5,8 +5,25 @@ addpath('functions/')
 % setting paths:
 usr_path = userpath;
 usr_path = usr_path(1:end-17);
-
 project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+
+% colors:
+colors_red = [[255, 219, 219] ; [255, 146, 146] ; [255, 73, 73] ; [255, 0, 0] ; [182, 0, 0]]/255;
+colors_gray = ['#d3d3d3' ; '#b9b9b9' ; '#868686' ; '#6d6d6d' ; '#535353'];
+colors_blue = ['#dbecff' ; '#a8d1ff' ; '#429bff' ; '#0f80ff' ; '#0067db'];
+colors_cyan = ['#adecee' ; '#83e2e5' ; '#2ecfd4' ; '#23a8ac' ; '#1b7e81'];
+colors_random = ['#773344' ; '#E3B5A4' ; '#83A0A0' ; '#0B0014' ; '#D44D5C'];
+
+colors_blue = hex2rgb(colors_blue);
+colors_gray = hex2rgb(colors_gray);
+colors_random = hex2rgb(colors_random);
+
+% figure properties:
+my_font.xlabel = 11;
+my_font.ylabel = 11;
+my_font.title = 12;
+my_font.tick_label = 9;
+my_font.legend = 9;
 
 switch (what)
     case 'subject_routine'
@@ -105,10 +122,10 @@ switch (what)
         lpf = 0;                    % flag to do lowpass filtering;
         Fpass_lpf = 20;
         Fstop_lpf = 30;
-        natural_window_size = 200;      % window size to sample natural EMG
+        natural_window_size = 100;      % window size to sample natural EMG
         sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
         natural_window_type = 'Rect';   % sampling window type for natural EMGs.
-        wn_spacing = 2;                 % sampling spacing for the 'whole_sampled' option.
+        wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
         vararginoptions(varargin,{'subject_name','lpf','Fpass_lpf','Fstop_lpf', ...
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
         
@@ -454,8 +471,8 @@ switch (what)
         
         if (normalize_channels)
             % normalizing the natural EMGs:
-            for i = 1:length(sess)
-                emg_dist{i} = emg_dist{i} ./ scales(:,i)';
+            for i = 1:length(emg_dist.dist)
+                emg_dist.dist{i} = emg_dist.dist{i} ./ scales(:,emg_dist.sess(i))';
             end
         end
 
@@ -492,37 +509,46 @@ switch (what)
             end
         end
 
+
+        % plots:
         % loop on sessions:
-        figure;
-        for i = 1:length(sess)
-            subplot(1,2,i)
-            
-            % scatter 3D natural EMG dist:
-            scatter3(emg_dist{i}(:,dims(1)), emg_dist{i}(:,dims(2)), emg_dist{i}(:,dims(3)), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6], 'HandleVisibility','off');
-            xlabel(emg_locs_names(dims(1)))
-            ylabel(emg_locs_names(dims(2)))
-            zlabel(emg_locs_names(dims(3)))
-            title(sess{i})
+        for i = 1:length(unique(emg_dist.sess))
+            figure;
+            % loop on partitions:
+            for part = 1:length(unique(emg_dist.partition))
+                subplot(1,length(unique(emg_dist.partition)),part)
+                
+                tmp_dist = emg_dist.dist(emg_dist.sess==i);
+                tmp_dist = tmp_dist{part};
 
-            hold all;
-            
-            % mapping mean devs to colormap:
-            c = map2color(chords_mean_dev(:,i), autumn);
-
-            % put avg chord patterns on the plot
-            for j = 1:size(chord_emg_mat{i},1)
-                % in case of single finger chords:
-                if (j <= 10)
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled', 'HandleVisibility','off')
-                % in case of multi finger chords:
-                else
-                    scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'filled', 'MarkerFaceColor', c(j,:))
+                % scatter 3D natural EMG dist:
+                scatter3(tmp_dist(:,dims(1)), tmp_dist(:,dims(2)), tmp_dist(:,dims(3)), 10, 'filled', 'MarkerFaceColor', [0.6,0.6,0.6], 'HandleVisibility','off');
+                xlabel(emg_locs_names(dims(1)),'FontSize',my_font.xlabel)
+                ylabel(emg_locs_names(dims(2)),'FontSize',my_font.ylabel)
+                zlabel(emg_locs_names(dims(3)),'FontSize',my_font.xlabel)
+                title([sess{i} ' , partition ' num2str(part)],'FontSize',my_font.title)
+                hold on;
+                
+                % mapping mean devs to colormap:
+                c = map2color(chords_mean_dev(:,i), autumn);
+    
+                % put avg chord patterns on the plot
+                for j = 1:size(chord_emg_mat{i},1)
+                    % in case of single finger chords:
+                    if (j <= 10)
+                        scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'k', 'filled', 'HandleVisibility','off')
+                    % in case of multi finger chords:
+                    else
+                        scatter3(chord_emg_mat{i}(j,dims(1)), chord_emg_mat{i}(j,dims(2)), chord_emg_mat{i}(j,dims(3)), 100, 'filled', 'MarkerFaceColor', c(j,:))
+                    end
                 end
-            end
-            legend(num2str(chords(11:end)))
 
+                % legend(num2str(chords(11:end)))
+                colorbar;
+            end
+            
         end
-        colorbar;
+        
 
     case 'get_scale_factor_emg'
         subject_name = 'subj01';
@@ -671,26 +697,26 @@ switch (what)
             for i = 1:length(sess)
                 subplot(2,1,i)
                 hold on
-                scatter_corr(chords_mean_dev(1:10,i), mean(chord_emg_mat{i}(1:10,:),2), 'r', 'o')
+                scatter_corr(vecnorm(chord_emg_mat{i}(1:10,:)')', chords_mean_dev(1:10,i), 'r', 'o')
                 hold on
-                scatter_corr(chords_mean_dev(11:end,i), mean(chord_emg_mat{i}(11:end,:),2), 'k', 'filled')
-                title(sprintf('sess %d',i))
-                xlabel('avg mean deviation')
-                ylabel('avg emg across ch and trial')
-                ylim([0,1])
-                xlim([0,4])
+                scatter_corr(vecnorm(chord_emg_mat{i}(11:end,:)')', chords_mean_dev(11:end,i), 'k', 'filled')
+                title(sprintf('sess %d',i),'FontSize',my_font.title)
+                xlabel('Norm EMG','FontSize',my_font.xlabel)
+                ylabel('MD','FontSize',my_font.ylabel)
+                % ylim([0,1])
+                ylim([0,4])
             end
 
             figure;
             for i = 1:length(sess)
                 subplot(2,1,i)
                 hold on
-                scatter_corr(chords_mean_dev(:,i), mean(chord_emg_mat{i}(:,:),2), 'k', 'o')
-                title(sprintf('sess %d',i))
-                xlabel('avg mean deviation')
-                ylabel('avg emg across ch and trial')
-                ylim([0,1])
-                xlim([0,4])
+                scatter_corr(vecnorm(chord_emg_mat{i}')', chords_mean_dev(:,i), 'k', 'o')
+                title(sprintf('sess %d',i),'FontSize',my_font.title)
+                xlabel('Norm EMG','FontSize',my_font.xlabel)
+                ylabel('MD','FontSize',my_font.ylabel)
+                % ylim([0,1])
+                ylim([0,4])
             end
         end
         
