@@ -116,6 +116,53 @@ switch (what)
 
         dsave(fullfile(project_path,'analysis','natChord_all.tsv'),ANA);
 
+    case 'make_chord_dataframe'
+        % fields:
+        % sn, sess, chordID, num_trials, num_fingers, MD, MT, RT, MD_std, MT_std, RT_std  
+
+        % load trial dataframe:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        subjects = unique(data.sn);
+        sess = (data.BN<=5) + 2*(data.BN>=6 & data.BN<=10);
+        chords = unique(data.chordID);
+        % sorting chords in an arbitrary way:
+        chords_sorted = [19999, 91999, 99199, 99919, 99991, 29999, 92999, 99299, 99929, 99992];
+        [ind,~] = find(chords == chords_sorted);
+        chords = [chords_sorted'; chords(setdiff(1:length(chords),ind))];
+
+        n = get_num_active_fingers(chords);
+
+        % container to hold the dataframe:
+        ANA = [];
+        % loop on subjects:
+        for i = 1:length(subjects)
+            tmp = [];
+            % loop on sess:
+            cnt = 1;
+            for j = 1:length(unique(sess))
+                % loop on chords:
+                for k = 1:length(chords)
+                    tmp.sn(cnt,1) = subjects(i);
+                    tmp.sess(cnt,1) = j;
+                    tmp.chordID(cnt,1) = chords(k);
+                    
+                    row = data.sn==subjects(i) & sess==j & data.chordID==chords(k) & data.trialCorr==1;
+                    tmp.num_trials(cnt,1) = sum(row);
+                    tmp.num_fingers(cnt,1) = n(k);
+                    tmp.MD(cnt,1) = mean(data.mean_dev(row));
+                    tmp.MT(cnt,1) = mean(data.MT(row));
+                    tmp.RT(cnt,1) = mean(data.RT(row));
+                    tmp.MD_std(cnt,1) = std(data.mean_dev(row));
+                    tmp.MT_std(cnt,1) = std(data.MT(row));
+                    tmp.RT_std(cnt,1) = std(data.RT(row));
+
+                    cnt = cnt+1;
+                end
+            end
+            ANA = addstruct(ANA,tmp,'row','force');
+        end
+        dsave(fullfile(project_path,'analysis','natChord_chord.tsv'),ANA);
+
     case 'make_natural_dist'
         subject_name = 'subj01';
         fs_emg = 2148.1481;         % EMG sampling rate in Hz  
