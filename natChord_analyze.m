@@ -412,23 +412,31 @@ switch (what)
 
         cond_vec = data.num_fingers;
         cond_vec(cond_vec>1) = 2;
-        sem_subj = get_sem(values, data.sn, data.sess, cond_vec);
+        [sem_subj, X_subj, Y_subj] = get_sem(values, data.sn, data.sess, cond_vec);
 
         % avg trend acorss sessions:
-        fig = figure('Position', [500 500 155 310]);
+        fig = figure('Position', [500 500 100 200]);
         fontsize(fig, my_font.tick_label, 'points')
+
         errorbar(sem_subj.partitions(sem_subj.cond==1),sem_subj.y(sem_subj.cond==1),sem_subj.sem(sem_subj.cond==1),'LineStyle','none','Color',colors_blue(2,:)); hold on;
-        lineplot(data.sess(data.num_fingers==1),values(data.num_fingers==1),'markertype','o','markersize',7,'markerfill',colors_blue(2,:),'markercolor',colors_blue(2,:),'linecolor',colors_blue(2,:),'linewidth',2,'errorbars','');
+        lineplot(data.sess(data.num_fingers==1),values(data.num_fingers==1),'markertype','o','markersize',5,'markerfill',colors_blue(2,:),'markercolor',colors_blue(2,:),'linecolor',colors_blue(2,:),'linewidth',2,'errorbars','');hold on;
+        
         errorbar(sem_subj.partitions(sem_subj.cond==2),sem_subj.y(sem_subj.cond==2),sem_subj.sem(sem_subj.cond==2),'LineStyle','none','Color',colors_blue(5,:))
-        lineplot(data.sess(data.num_fingers>1),values(data.num_fingers>1),'markertype','o','markersize',7,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorbars','');
-        legend('','single finger','','chord');
-        legend boxoff
+        lineplot(data.sess(data.num_fingers>1),values(data.num_fingers>1),'markertype','o','markersize',5,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorbars','');
+       
+        % legend('single finger','chord','');
+        % legend boxoff
         xlabel('sess','FontSize',my_font.xlabel)
-        ylabel(['avg ' replace(measure,'_',' ') ' across subj'],'FontSize',my_font.ylabel)
-        title([replace(measure,'_',' ')],'FontSize',my_font.title)
-        ylim([50 3500])
-        h = gca;
-        h.YTick = linspace(h.YTick(1),h.YTick(end),5);
+        ylabel('','FontSize',my_font.title)
+        % ylim([0.2 2.7])
+        % ylim([0 2500])
+        ylim([0 450])
+        xlim([0.8 2.2])
+        % h = gca;
+        % h.YTick = linspace(h.YTick(1),h.YTick(end),5);
+        set(gca,'ytick',[])
+        set(gca,'yticklabel',[])
+
     
     case 'behavior_reliability'
         plot_option = 1;
