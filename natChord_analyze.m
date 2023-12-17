@@ -399,6 +399,36 @@ switch (what)
         varargout{1} = vectorized_patterns;
         varargout{2} = corr_within;
         varargout{3} = corr_across;
+
+    case 'behavior_trends'
+        measure = 'MD';
+        vararginoptions(varargin,{'measure'})
+
+        % loading data:
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+
+        % getting the values of measure:
+        values = eval(['data.' measure]);
+
+        cond_vec = data.num_fingers;
+        cond_vec(cond_vec>1) = 2;
+        sem_subj = get_sem(values, data.sn, data.sess, cond_vec);
+
+        % avg trend acorss sessions:
+        fig = figure('Position', [500 500 155 310]);
+        fontsize(fig, my_font.tick_label, 'points')
+        errorbar(sem_subj.partitions(sem_subj.cond==1),sem_subj.y(sem_subj.cond==1),sem_subj.sem(sem_subj.cond==1),'LineStyle','none','Color',colors_blue(2,:)); hold on;
+        lineplot(data.sess(data.num_fingers==1),values(data.num_fingers==1),'markertype','o','markersize',7,'markerfill',colors_blue(2,:),'markercolor',colors_blue(2,:),'linecolor',colors_blue(2,:),'linewidth',2,'errorbars','');
+        errorbar(sem_subj.partitions(sem_subj.cond==2),sem_subj.y(sem_subj.cond==2),sem_subj.sem(sem_subj.cond==2),'LineStyle','none','Color',colors_blue(5,:))
+        lineplot(data.sess(data.num_fingers>1),values(data.num_fingers>1),'markertype','o','markersize',7,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorbars','');
+        legend('','single finger','','chord');
+        legend boxoff
+        xlabel('sess','FontSize',my_font.xlabel)
+        ylabel(['avg ' replace(measure,'_',' ') ' across subj'],'FontSize',my_font.ylabel)
+        title([replace(measure,'_',' ')],'FontSize',my_font.title)
+        ylim([50 3500])
+        h = gca;
+        h.YTick = linspace(h.YTick(1),h.YTick(end),5);
     
     case 'behavior_reliability'
         plot_option = 1;
@@ -495,75 +525,69 @@ switch (what)
         varargout{3} = corr_across;
 
     case 'behavior_var_decomp'
-        measure = 'mean_dev';
+        measure = 'MD';
         centered = 1;
-        vararginoptions(varargin,{'measure','centered'})
+        cond = 1;
+        vararginoptions(varargin,{'measure','centered','cond'})
 
-        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
-        subjects = unique(data.sn);
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
 
         % getting the values of measure:
         values = eval(['data.' measure]);
 
-        sess = (data.BN<=5) + 2*(data.BN>=6 & data.BN<=10);
+        if cond == 1
+            cond_vec = data.num_fingers;
+            cond_vec(cond_vec~=1) = 2;
+            [v_g, v_gs, v_gse] = reliability_var(values, data.sn, data.sess, 'cond_vec', cond_vec, 'centered', centered);
+        else
+            [v_g, v_gs, v_gse] = reliability_var(values, data.sn, data.sess, 'centered', centered);
+        end
         
-        % container for subj MDs:
-        subj_MD = {};
-        % estimating (v_g + v_s + v_e) and (v_g + v_s):
-        v_gse = 0;
-        v_gs = 0;
-        for i = 1:length(subjects)
-            A = [];
-            for j = 3:4
-                tmp_val = 0;
-                % loop on chords:
-                for k = 1:length(chords)
-                    tmp_val(k) = mean(values(data.sn==subjects(i) & data.trialCorr==1 & data.chordID==chords(k) & sess==j));
-                end
-                if centered
-                    tmp_val = tmp_val-mean(tmp_val);
-                end
-                A = [A,tmp_val'];
-            end
-            subj_MD{i} = A;
-            B = A' * A;
-            % number of partitions:
-            N = size(A,2);
-
-            % adding sum of diagonal elems (y_ij' * y_ij):
-            v_gse = v_gse + trace(B)/N/length(subjects);
-
-            % adding sum of off-diagonal elems (y_ij' * y_ik):
-            mean_cov = B .* (1-eye(N));
-            mean_cov = sum(mean_cov(:))/(N*(N-1));
-            v_gs = v_gs + mean_cov/length(subjects);
-        end
-
-        % estimating v_g:
-        v_g = 0;
-        N = length(subjects);
-        for i = 1:length(subjects)-1
-            for j = i+1:length(subjects)
-                B = subj_MD{i}' * subj_MD{j};
-                v_g = v_g + sum(B(:))/size(B,1)^2/(N*(N-1)/2);
-            end
-        end
-
         % plot:
-        fig = figure();
-        fontsize(fig, my_font.tick_label, "points")
-        bar(1,1,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[0.8 0.8 0.8])
-        hold on
-        bar(1,1-(v_gs-v_g)/v_gse,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[36, 168, 255]/255)
-        bar(1,v_g/v_gse,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[238, 146, 106]/255)
-        drawline(1,'dir','horz','color',[0.8 0.8 0.8])
-        legend('e','s','g')
-        legend boxoff
-        box off
-        ylim([0 1.2])
-        xticklabels('all chords')
-        ylabel('percent variance','FontSize',my_font.ylabel)
-        title(['var decomp ' replace(measure,'_',' ')],'FontSize',my_font.title);
+        if cond == 1
+            y = [];
+            fig = figure();
+            fontsize(fig,my_font.tick_label,"points")
+            for i = 1:length(unique(cond_vec))
+                y(i,:) = [v_g{i}/v_gse{i} (v_gs{i}-v_g{i})/v_gse{i} (v_gse{i}-v_gs{i})/v_gse{i}];
+                b = bar(i,y(i,:),'stacked','FaceColor','flat');
+                b(1).CData = [238, 146, 106]/255;   % global var
+                b(2).CData = [36, 168, 255]/255;  % subj var
+                b(3).CData = [0.8 0.8 0.8];  % noise var
+                b(1).EdgeColor = [1 1 1];
+                b(2).EdgeColor = [1 1 1];
+                b(3).EdgeColor = [1 1 1];
+                b(1).LineWidth = 3;
+                b(2).LineWidth = 3;
+                b(3).LineWidth = 3;
+                hold on
+            end
+            drawline(1,'dir','horz','color',[0.7 0.7 0.7])
+            drawline(0,'dir','horz','color',[0.7 0.7 0.7])
+            box off;
+            title(['var decomp ' replace(measure,'_',' ')],'FontSize',my_font.title)
+            xlabel('num fingers','FontSize',my_font.xlabel)
+            ylabel('percent variance','FontSize',my_font.ylabel)
+            title(['var decomp ' replace(measure,'_',' ')],'FontSize',my_font.title);
+            legend('g','s','e')
+            legend boxoff
+            ylim([-0.3,1.2])
+        else
+            fig = figure();
+            fontsize(fig, my_font.tick_label, "points")
+            bar(1,1,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[0.8 0.8 0.8])
+            hold on
+            bar(1,1-(v_gs-v_g)/v_gse,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[36, 168, 255]/255)
+            bar(1,v_g/v_gse,'FaceColor','flat','EdgeColor',[1,1,1],'LineWidth',4,'CData',[238, 146, 106]/255)
+            drawline(1,'dir','horz','color',[0.8 0.8 0.8])
+            legend('e','s','g')
+            legend boxoff
+            box off
+            ylim([0 1.2])
+            xticklabels('all chords')
+            ylabel('percent variance','FontSize',my_font.ylabel)
+            title(['var decomp ' replace(measure,'_',' ')],'FontSize',my_font.title);
+        end
 
         varargout{1} = [v_g, v_gs, v_gse];
 
