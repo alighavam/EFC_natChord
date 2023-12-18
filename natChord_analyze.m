@@ -1037,7 +1037,7 @@ switch (what)
                         tmp.MD(cnt,1) = chords_mean_dev(j);
                         tmp.thresh(cnt,1) = n_thresh;
                         tmp.d(cnt,1) = d(n_thresh);
-                        tmp.slope(cnt,1) = linslope([d(1:n_thresh).^10,(1:n_thresh)']); %n_thresh/d(n_thresh)^10;
+                        tmp.slope(cnt,1) = linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0); %n_thresh/d(n_thresh)^10;
                         tmp.log_slope(cnt,1) = log(tmp.slope(cnt,1));
 
                         cnt = cnt+1;
