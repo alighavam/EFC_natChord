@@ -988,7 +988,7 @@ switch (what)
         
         % tranforming subject numbers to subject names:
         subject_names = strcat('subj',num2str(subjects,'%02.f'));
-
+        
         % container for the dataframe:
         C = [];
         for sn = 1:length(subjects)
@@ -1010,18 +1010,19 @@ switch (what)
             [avg_patterns, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_names(sn,:),'plot_option',0,'normalize_channels',1);
             n = get_num_active_fingers(chords);
 
+            % getting avg mean deviation of chords across sessions:
+            chords_mean_dev = zeros(length(chords),1);
+            for j = 1:length(chords)
+                row = data.sn==subjects(sn) & data.chordID==chords(j);
+                chords_mean_dev(j) = data.MD(row & data.sess==1)/2 + ... 
+                                     data.MD(row & data.sess==2)/2;
+            end
+
             % looping through sessions:
             for i = 1:length(unique(data.sess))
                 % container for the each session's dataframe:
                 tmp = [];
 
-                % getting avg mean deviation of chords:
-                chords_mean_dev = zeros(length(chords),1);
-                for j = 1:length(chords)
-                    row = data.sn==subjects(sn) & data.sess==i & data.chordID==chords(j);
-                    chords_mean_dev(j) = data.MD(row);
-                end
-    
                 cnt = 1;
                 for j = 1:length(chords)
                     for k = 1:length(emg_dist.partition(emg_dist.sess==i))
@@ -1050,44 +1051,44 @@ switch (what)
 
         if (plot_option)
             for sn = 1:length(subjects)
-                fig = figure();
-                fontsize(fig,my_font.tick_label,'points');
-                for i = 1:length(unique(C.sess))
-                    subplot(1,2,i)
-                    % single finger:
-                    hold on
-                    scatter_corr(C.slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
-                    hold on
-                    % chord:
-                    scatter_corr(C.slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), 'k', 'o')
-
-                    title(sprintf('Slope (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
-                    xlabel('Slope (n/d)','FontSize',my_font.xlabel)
-                    ylabel('MD','FontSize',my_font.ylabel)
-                    ylim([0,4])
-                end
-                sgtitle(sprintf(subject_names(sn,:)))
-                legend('single finger','','','','','chord','','','')
-                legend boxoff
+                % fig = figure();
+                % fontsize(fig,my_font.tick_label,'points');
+                % for i = 1:length(unique(C.sess))
+                %     subplot(1,2,i)
+                %     % single finger:
+                %     hold on
+                %     scatter_corr(C.slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
+                %     hold on
+                %     % chord:
+                %     scatter_corr(C.slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), 'k', 'o')
+                % 
+                %     title(sprintf('Slope (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                %     xlabel('Slope (n/d)','FontSize',my_font.xlabel)
+                %     ylabel('MD','FontSize',my_font.ylabel)
+                %     ylim([0,4])
+                % end
+                % sgtitle(sprintf(subject_names(sn,:)))
+                % legend('single finger','','','','','chord','','','')
+                % legend boxoff
                 
-                figure;
-                for i = 1:length(unique(C.sess))
-                    subplot(1,2,i)
-                    % single finger:
-                    hold on
-                    scatter_corr(C.d(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
-                    hold on
-                    % chord:
-                    scatter_corr(C.d(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), 'k', 'o')
-
-                    title(sprintf('distance at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
-                    xlabel('d','FontSize',my_font.xlabel)
-                    ylabel('MD','FontSize',my_font.ylabel)
-                    ylim([0,4])
-                end
-                sgtitle(subject_names(sn,:))
-                legend('single finger','','','','','chord','','','')
-                legend boxoff
+                % figure;
+                % for i = 1:length(unique(C.sess))
+                %     subplot(1,2,i)
+                %     % single finger:
+                %     hold on
+                %     scatter_corr(C.d(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
+                %     hold on
+                %     % chord:
+                %     scatter_corr(C.d(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), 'k', 'o')
+                % 
+                %     title(sprintf('distance at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                %     xlabel('d','FontSize',my_font.xlabel)
+                %     ylabel('MD','FontSize',my_font.ylabel)
+                %     ylim([0,4])
+                % end
+                % sgtitle(subject_names(sn,:))
+                % legend('single finger','','','','','chord','','','')
+                % legend boxoff
     
                 figure;
                 for i = 1:length(unique(C.sess))
@@ -1108,19 +1109,46 @@ switch (what)
                 legend('single finger','','','','','chord','','','')
                 legend boxoff
 
+                % sessions merged:
                 figure;
-                for i = 1:length(unique(C.sess))
-                    subplot(1,2,i)
-                    % all chords:
-                    hold on
-                    scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i), C.MD(C.sn==subjects(sn) & C.sess==i), 'k', 'o')
+                subplot(1,2,i)
+                % single finger:
+                hold on
+                x1 = C.log_slope(C.sn==subjects(sn) & C.sess==1 & C.num_fingers==1);
+                x2 = C.log_slope(C.sn==subjects(sn) & C.sess==2 & C.num_fingers==1);
+                y1 = C.MD(C.sn==subjects(sn) & C.sess==1 & C.num_fingers==1);
+                y2 = C.MD(C.sn==subjects(sn) & C.sess==2 & C.num_fingers==1);
+                scatter_corr([x1;x2], [y1;y2], 'r', 'o')
+                
+                x1 = C.log_slope(C.sn==subjects(sn) & C.sess==1 & C.num_fingers>1);
+                x2 = C.log_slope(C.sn==subjects(sn) & C.sess==2 & C.num_fingers>1);
+                y1 = C.MD(C.sn==subjects(sn) & C.sess==1 & C.num_fingers>1);
+                y2 = C.MD(C.sn==subjects(sn) & C.sess==2 & C.num_fingers>1);
+                % chord:
+                scatter_corr([x1;x2], [y1;y2], 'k', 'o')
 
-                    title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
-                    xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
-                    ylabel('MD','FontSize',my_font.ylabel)
-                    ylim([0,4])
-                end
+                title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
+                ylabel('MD','FontSize',my_font.ylabel)
+                ylim([0,4])
                 sgtitle(subject_names(sn,:))
+                legend('single finger','','','','','chord','','','')
+                legend boxoff
+                
+                fprintf("GOOZ: %.4f\n",corr([x1;x2],[y1;y2]))
+                % figure;
+                % for i = 1:length(unique(C.sess))
+                %     subplot(1,2,i)
+                %     % all chords:
+                %     hold on
+                %     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i), C.MD(C.sn==subjects(sn) & C.sess==i), 'k', 'o')
+                % 
+                %     title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                %     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
+                %     ylabel('MD','FontSize',my_font.ylabel)
+                %     ylim([0,4])
+                % end
+                % sgtitle(subject_names(sn,:))
             end
         end
 
