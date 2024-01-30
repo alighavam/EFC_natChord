@@ -72,7 +72,7 @@ def gen_chords(chords, column_names, nChunks, nRep, subNum, planTime, execMaxTim
     np.random.shuffle(chords_set2)
 
     # dividing chords into runs:
-    nRuns = 4 # number of runs to divide. the value is arbitrary. I just selected in a way that the number of chords is dividable by this number and the runs are not too long.
+    nRuns = 10 # number of runs to divide. the value is arbitrary. I just selected in a way that the number of chords is dividable by this number and the runs are not too long.
     divisions = np.split(chords, nRuns)
     divisions_set2 = np.split(chords_set2, nRuns)
 
@@ -107,8 +107,8 @@ def gen_chords(chords, column_names, nChunks, nRep, subNum, planTime, execMaxTim
         df2['iti'] = col06
 
         # saving the dataframe:
-        fname01 = fileNameBase + f"{i+2:02}" + '.tgt'
-        fname02 = fileNameBase + f"{i+7:02}" + '.tgt'
+        fname01 = fileNameBase + f"{i+1:02}" + '.tgt'
+        fname02 = fileNameBase + f"{i+11:02}" + '.tgt'
         df.to_csv('target/'+fname01, sep='\t', index=False)
         df2.to_csv('target/'+fname02, sep='\t', index=False)
 
@@ -116,15 +116,18 @@ def gen_chords(chords, column_names, nChunks, nRep, subNum, planTime, execMaxTim
 # Chords definition:
 single_finger_chords = [] # empty list of single finger chords
 chords = [] # empty list of chords
-single_finger_chords.extend(np.unique(list(itertools.permutations([1,9,9,9,9])), axis=0).tolist()) # single finger extensions
-single_finger_chords.extend(np.unique(list(itertools.permutations([2,9,9,9,9])), axis=0).tolist()) # single finger flexions
-chords.extend([[1,1,9,1,2],[2,2,9,2,1],[2,1,9,1,1],[1,2,9,2,2]])  # chord 1 + mirrors
-chords.extend([[1,2,1,9,1],[2,1,2,9,2],[1,9,1,2,1],[2,9,2,1,2]])  # chord 2 + mirrors
-chords.extend([[1,2,1,1,2],[2,1,2,2,1],[2,1,1,2,1],[1,2,2,1,2]])  # chord 3 + mirrors
-chords.extend([[1,1,2,1,2],[2,2,1,2,1],[2,1,2,1,1],[1,2,1,2,2]])  # chord 4 + mirrors
+# single_finger_chords.extend(np.unique(list(itertools.permutations([1,9,9,9,9])), axis=0).tolist()) # single finger extensions
+# single_finger_chords.extend(np.unique(list(itertools.permutations([2,9,9,9,9])), axis=0).tolist()) # single finger flexions
+chords.extend([[1,9,9,9,9],[9,1,9,9,9],[9,9,1,9,9],[9,9,9,1,9],[9,9,9,9,1],[2,9,9,9,9],[9,2,9,9,9],[9,9,2,9,9],[9,9,9,2,9],[9,9,9,9,2]])  # single finger chords
+chords.extend([[9,2,2,2,9],[1,2,2,9,9],[2,9,2,2,9],[9,2,1,2,9],[9,9,2,2,2],[2,1,1,9,9],[2,9,1,2,9],[9,1,1,1,9],[9,1,1,2,9],[1,1,1,9,9]])  # 3-finger chords easy
+chords.extend([[1,1,1,1,1],[2,1,1,1,1],[2,2,2,2,2],[1,2,2,2,2],[2,1,1,1,2],[2,1,1,2,2],[2,2,2,2,1],[1,1,1,1,2],[1,1,1,2,2],[1,2,2,2,1]])  # 5-finger chords easy
+chords.extend([[9,2,2,1,9],[1,9,2,9,1],[2,2,9,1,9],[2,1,9,9,2],[2,2,9,2,9],[9,1,9,1,1],[9,2,9,1,1],[2,9,2,1,9],[2,9,9,1,2],[9,1,1,9,2]])  # 3-finger chords med
+chords.extend([[1,1,2,2,2],[2,1,2,2,1],[1,1,2,2,1],[1,2,1,1,2],[1,2,2,1,1],[2,1,2,1,1],[2,2,1,1,1],[2,2,1,2,1],[2,2,2,1,1],[1,1,1,2,2]])  # 5-finger chords med
+chords.extend([[9,1,9,1,2],[1,9,1,9,2],[2,9,1,9,1],[9,1,1,9,1],[9,1,2,9,2],[9,2,9,1,2],[1,1,9,1,9],[9,2,1,9,1],[9,1,2,1,9],[9,1,9,2,1]])  # 3-finger chords diff
+chords.extend([[1,1,2,1,2],[1,2,1,2,2],[1,1,2,1,1],[1,2,2,1,2],[2,1,2,1,2],[2,2,2,1,2],[1,1,1,2,1],[2,1,1,2,1],[1,2,1,1,1],[1,2,1,1,2]])  # 5-finger chords diff
 
 # Joining the elements of the chords:
-single_finger_chords = [int(''.join(map(str, sublist))) for sublist in single_finger_chords]
+# single_finger_chords = [int(''.join(map(str, sublist))) for sublist in single_finger_chords]
 chords = [int(''.join(map(str, sublist))) for sublist in chords]
 
 # Params:
@@ -139,14 +142,13 @@ iti = 200           # inter-trial interval
 # column names:
 column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'feedbackTime', 'iti']
 
-
 # setting the subject number !!!-------- Don't forget to change --------!!!:
-subNum = 5
+subNum = 3
 fileNameBase_sf = 'natChord_subj' + f"{subNum:02}" + '_run'
 filenameBase_chord = 'natChord_subj' + f"{subNum:02}" + '_run'
 
 # generating and saving the target file for single finger run:
-gen_single_finger(single_finger_chords, column_names, nChunks, nRep, subNum, planTime, execMaxTime, feedbackTime, iti, fileNameBase_sf)
+# gen_single_finger(single_finger_chords, column_names, nChunks, nRep, subNum, planTime, execMaxTime, feedbackTime, iti, fileNameBase_sf)
 
 # generating and saving the target file for chord runs:
 gen_chords(chords, column_names, nChunks, nRep, subNum, planTime, execMaxTime, feedbackTime, iti, filenameBase_chord)
