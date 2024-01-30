@@ -1025,26 +1025,32 @@ switch (what)
 
                 cnt = 1;
                 for j = 1:length(chords)
+                    d_avg = 0;
+                    slope_avg = 0;
+                    log_slope_avg = 0;
                     for k = 1:length(emg_dist.partition(emg_dist.sess==i))
                         % sorted distances from the natural dist:
                         d = get_d_from_natural(avg_patterns{i}(j,:)',emg_dist.dist{emg_dist.sess==i & emg_dist.partition==k}, 'd_type',d_type,'lambda',lambda);
-        
-                        % storing the information:
-                        tmp.sn(cnt,1) = subjects(sn);
-                        tmp.sess(cnt,1) = i;
-                        tmp.partition(cnt,1) = k;
-                        tmp.chordID(cnt,1) = chords(j);
-                        tmp.num_fingers(cnt,1) = n(j);
-                        tmp.MD(cnt,1) = chords_mean_dev(j);
-                        tmp.thresh(cnt,1) = n_thresh;
-                        tmp.d(cnt,1) = d(n_thresh);
-                        tmp.slope(cnt,1) = linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0); %n_thresh/d(n_thresh)^10;
-                        tmp.log_slope(cnt,1) = log(tmp.slope(cnt,1));
-
-                        cnt = cnt+1;
+                        
+                        d_avg = d_avg + d(n_thresh)/length(emg_dist.partition(emg_dist.sess==i));
+                        slope_avg = slope_avg + linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0)/length(emg_dist.partition(emg_dist.sess==i)); %n_thresh/d(n_thresh)^10;
+                        log_slope_avg = log_slope_avg + log(linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0))/length(emg_dist.partition(emg_dist.sess==i));
                     end
-                end
+                    % log_slope_avg = log(slope_avg);
+                    % storing the information:
+                    tmp.sn(cnt,1) = subjects(sn);
+                    tmp.sess(cnt,1) = i;
+                    tmp.partition(cnt,1) = k;
+                    tmp.chordID(cnt,1) = chords(j);
+                    tmp.num_fingers(cnt,1) = n(j);
+                    tmp.MD(cnt,1) = chords_mean_dev(j);
+                    tmp.thresh(cnt,1) = n_thresh;
+                    tmp.d(cnt,1) = d_avg;
+                    tmp.slope(cnt,1) = slope_avg; %n_thresh/d(n_thresh)^10;
+                    tmp.log_slope(cnt,1) = log_slope_avg;
 
+                    cnt = cnt+1;
+                end
                 C = addstruct(C,tmp,'row','force');
             end
         end
@@ -1111,7 +1117,6 @@ switch (what)
 
                 % sessions merged:
                 figure;
-                subplot(1,2,i)
                 % single finger:
                 hold on
                 x1 = C.log_slope(C.sn==subjects(sn) & C.sess==1 & C.num_fingers==1);
@@ -1130,12 +1135,11 @@ switch (what)
                 title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
                 xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                 ylabel('MD','FontSize',my_font.ylabel)
-                ylim([0,4])
+                % ylim([0,4])
                 sgtitle(subject_names(sn,:))
                 legend('single finger','','','','','chord','','','')
                 legend boxoff
                 
-                fprintf("GOOZ: %.4f\n",corr([x1;x2],[y1;y2]))
                 % figure;
                 % for i = 1:length(unique(C.sess))
                 %     subplot(1,2,i)
