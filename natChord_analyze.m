@@ -1135,7 +1135,7 @@ switch (what)
                 title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
                 xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                 ylabel('MD','FontSize',my_font.ylabel)
-                % ylim([0,4])
+                ylim([0,4])
                 sgtitle(subject_names(sn,:))
                 legend('single finger','','','','','chord','','','')
                 legend boxoff
