@@ -32,6 +32,8 @@ subj_info = dload(participants_tsv);
 
 % load .dat file:
 D = dload(datFileName);
+sess = (D.BN<=10) + 2*(D.BN>=11);
+sess = unique(sess);
 
 % container for the dat and mov structs:
 ANA = [];
@@ -57,7 +59,7 @@ for i = 1:length(D.BN)
         % load the emg file of the block (this is chord EMG not natural,
         % we'll deal with the natural EMGs later in the code):
         fprintf("Loading emg file %d.\n",D.BN(i))
-        emg_data = readtable(fullfile('data', subjName, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
+        emg_data = readtable(fullfile(project_path,'data', subjName, ['emg_run' num2str(D.BN(i),'%02d') '.csv']));
         
         % call emg_chord_prep function:
         [emg_block,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs_emg, getrow(D,D.BN == D.BN(i)), mov, ...
@@ -97,10 +99,13 @@ dsave(subjFileName,ANA);
 save(movFileName, 'MOV_struct')
 save(emgFileName, 'EMG_struct')
 
-
 % Preprocessing and dealing with the natural EMGs:
 fprintf("Processing natural EMG data...\n\n")
-make_natural_emg(subjName,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+
+% give session number to the function to know how to create the natural 
+% dist:
+sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
+make_natural_emg(subjName,sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
 
 
 
