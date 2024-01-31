@@ -33,11 +33,11 @@ switch (what)
     case 'subject_routine'
         % handling input arguments:
         subject_name = 'subj01';
-        smoothing_win_length = 25;
+        smoothing_win_length = 30;
         lpf = 0;                            % wether to do lowpass filtering on the EMG data.
         sampling_option = 'whole_sampled';  % sampling option for the natural EMG data
-        natural_window_size = 200;          % wn size for natural EMGs sampling in ms.
-        wn_spacing = 2;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
+        natural_window_size = 100;          % wn size for natural EMGs sampling in ms.
+        wn_spacing = 3;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
         natural_window_type = 'Rect';       % window shape for the natural EMG sampling. 'Rect' or 'Gaussian'
         vararginoptions(varargin,{'subject_name','smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
@@ -56,10 +56,10 @@ switch (what)
                          'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
         end
     
-    case 'make_trial_dataframe'
-        % Calculate RT, MT, Mean Deviation for each trial of each subejct
+    case 'make_all_dataframe'
+        % Calculate RT, MT, MD for each trial of each subejct
         % and create a struct without the mov signals and save it as a
-        % single struct called efc1_all.mat
+        % single struct called natChord_all.mat
         
         % getting subject files:
         files = dir(fullfile(project_path, 'analysis', 'natChord_*_raw.tsv'));
@@ -112,7 +112,10 @@ switch (what)
             tmp_data.RT = rt_tmp;
             tmp_data.MT = mt_tmp;
             tmp_data.first_finger = first_finger_tmp;
-            tmp_data.mean_dev = mean_dev_tmp;
+            tmp_data.MD = mean_dev_tmp;
+
+            sess = (tmp_data.BN<=10) + 2*(tmp_data.BN>=11);
+            tmp_data.sess = sess;
             
             % adding subject data to ANA:
             ANA=addstruct(ANA,tmp_data,'row','force');
