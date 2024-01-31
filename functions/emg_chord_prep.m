@@ -4,7 +4,7 @@ function [emg,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs, D_block,
 emg_data(1:3,:) = [];
 
 % if first session:
-if (D_block.BN(1) <= 5)
+if (D_block.BN(1) <= 10)
     % getting the used emg channels from subject_info structure:
     emg_channels = strsplit(subject_info.emg_electrode_sess01{1},',');
 else
@@ -18,7 +18,7 @@ if length(emg_channels) ~= 10
 end
 
 % adding trigger channel to emg_channels:
-emg_channels = [{'02'}, emg_channels];
+emg_channels = [{'AnalogInputAdapter'}, emg_channels];
 
 % building electrode names based on channels loaded from participant.tsv:
 % The container to store the data we select from the emg_table:
@@ -31,23 +31,37 @@ for i = 1:length(emg_channels)
     if (~isnan(channel_num))
         % name of the electrode in table:
         channel_name = ['AvantiSensor' num2str(channel_num) '_'];
+    
+    % if channel was analog trigger adapter:
+    elseif (contains(emg_channels{i},'AnalogInput'))
+        channel_name = 'AnalogInputAdapter';
 
     % if channel was a Duo sensor:
     else
         % name of the electrode in table:
-        channel_name = ['DuoSensor' emg_channels{i}(1) '_'];
-        duo_flag = emg_channels{i}(2);
+        if length(emg_channels{i})==2
+            channel_name = ['DuoSensor' emg_channels{i}(1) '_'];
+            duo_flag = emg_channels{i}(2);
+        elseif length(emg_channels{i})==3
+            channel_name = ['DuoSensor' emg_channels{i}(1:2) '_'];
+            duo_flag = emg_channels{i}(3);
+        end
     end
 
     % get emg table variable names:
     table_names = emg_data.Properties.VariableNames;
     
     % find the table index corresponding to emg_channels{i}:
-    ind = find(~cellfun(@isempty,strfind(table_names,channel_name)));
+    ind = find(contains(table_names,channel_name));
+    
+    % if analog tigger:
+    if (contains(channel_name,'AnalogInputAdapter'))
+        emg_data_selected = [emg_data_selected, table2array(emg_data(:,ind:ind+1))];
 
     % if Avanti:
-    if (contains(channel_name,'Avanti'))
+    elseif (contains(channel_name,'Avanti'))
         emg_data_selected = [emg_data_selected, table2array(emg_data(:,ind:ind+1))];
+
     % if Duo:
     else
         if (duo_flag == 'a')
@@ -60,14 +74,15 @@ for i = 1:length(emg_channels)
 end
 
 % Extracting triggers of the emg:
-t = emg_data_selected(:,1);
+t_trig = emg_data_selected(:,1);
+t_emg = emg_data_selected(:,3);
 trig = emg_data_selected(:,2);
 
 % removing trigger signal from EMG data:
 emg_data_selected(:,1:2) = [];
 
 % detecting trial start times from the EMGs:
-[~,riseIdx,~,fallIdx] = detectTrig(trig,t,0.4,length(D_block.BN),1);
+[~,riseIdx,~,fallIdx] = detectTrig(trig,t_trig,t_emg,0.06,length(D_block.BN),1);
 
 % if number of triggers did not make sense, throw and error:
 if (length(riseIdx) ~= length(fallIdx) || length(riseIdx) ~= length(D_block.BN))
@@ -76,6 +91,13 @@ end
 
 % getting rid of the time vectors from the EMG data:
 emg_data_selected = emg_data_selected(:,2:2:end);
+
+% removing extra NaN elements from the end of the EMG signals (NaNs are
+% there bc the sampling freq of trigger channel is not the same as EMG
+% channel (BTW THANK YOU "DELSYS" FOR THIS DISCREPANCY AND CHARGING 4 GRANDS 
+% PER ELECTRODE :~o ):
+[row_nan,~] = find(isnan(emg_data_selected));
+emg_data_selected(unique(row_nan),:) = [];
 
 % filtering the EMG signals:
 fprintf("Filtering the raw EMG signals:\n\n")
