@@ -12,7 +12,7 @@ function d = get_d_from_natural(pattern,nat_dist,varargin)
 %       Columns are EMG channels. 
 %       
 %       pattern: EMG pattern. It's a column vector of EMGs. Must be a 
-%       K dimensional vector, K being number of EMG channels.
+%       K by 1 vector, K being number of EMG channels.
 %
 %   varargin:
 %       'd_type' -> 'Euclidean', 'project_to_nSphere', 'oval' 
