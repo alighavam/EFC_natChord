@@ -1328,7 +1328,6 @@ switch (what)
         X_test = X(TN == 5,:);
         Y_test = Y(TN == 5,:);
         C = linear_classify(X_train,Y_train,X_test,Y_test);
-        trainingLabels = vec2ind(Y_train')'
 
         % train and test overall with labels:
         X_train = X(TN ~= 5,:);
@@ -1346,13 +1345,33 @@ switch (what)
         C = linear_classify(X_train,Y_train,X_test,Y_test,'label',1);
         fprintf('label: 1f acc = %.4f\n',C.acc_test);
 
-        % only chords with labels:
-        X_train = X(data.num_fingers~=1 & TN~=5,:);
-        Y_train = label(data.num_fingers~=1 & TN~=5,:);
-        X_test = X(data.num_fingers~=1 & TN==5,:);
-        Y_test = label(data.num_fingers~=1 & TN==5,:);
-        C = linear_classify(X_train,Y_train,X_test,Y_test,'label',1);
-        fprintf('label: 1f-chord acc = %.4f\n',C.acc_test);
+        % predict EMG from chordID - single finger:
+        X_train = Y(data.num_fingers==1 & TN ~= 5,:);
+        Y_train = X(data.num_fingers==1 & TN ~= 5,:);
+        X_test = Y(data.num_fingers==1 & TN == 5,:);
+        Y_test = X(data.num_fingers==1 & TN == 5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+        C.r2
+
+        % predict EMG from chordID - chord from 1f:
+        X_train = Y(data.num_fingers==1,:);
+        Y_train = X(data.num_fingers==1,:);
+        X_test = Y(data.num_fingers~=1,:);
+        Y_test = X(data.num_fingers~=1,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+        C.r2
+
+        % predict EMG from chordID - overall:
+        X_train = Y(TN ~= 5,:);
+        Y_train = X(TN ~= 5,:);
+        X_test = Y(TN == 5,:);
+        Y_test = X(TN == 5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+        C.r2
+        figure;
+        imagesc(C.Y_test_pred);
+        figure;
+        imagesc(Y_test);
 
         varargout{1} = C;
         

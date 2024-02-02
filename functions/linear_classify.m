@@ -36,6 +36,8 @@ C.acc_train = acc;
 
 % Prediction on test data:
 Y_pred = X_test*beta;
+r2 = 1-sum((Y_pred - Y_test).^2,1) ./ (sum((Y_test - mean(Y_test,1)).^2,1));
+C.r2 = mean(r2);
 
 % Accuracy on test data:
 pred_softmax = softmax(Y_pred')';
