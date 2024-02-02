@@ -1276,10 +1276,86 @@ switch (what)
         colorbar
 
     case 'decoding'
-        % linear classification from EMG to chord: 
         data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
         
+        TN = kron((1:5)',ones(1,size(data.BN,1)/5));
+        TN = TN(:);
+        data = getrow(data,data.trialCorr==1);
+        unique_chords = unique(data.chordID);
+        TN(data.trialCorr ~= 1) = [];
+        chords = num2str(data.chordID)-'0';
+        
+        % make design matirx:
+        X = [data.emg_hold_avg_e1,data.emg_hold_avg_e2,data.emg_hold_avg_e3,data.emg_hold_avg_e4,data.emg_hold_avg_e5,...
+             data.emg_hold_avg_f1,data.emg_hold_avg_f2,data.emg_hold_avg_f3,data.emg_hold_avg_f4,data.emg_hold_avg_f5];
+        
+        scales = [data.emg_baseline_e1,data.emg_baseline_e2,data.emg_baseline_e3,data.emg_baseline_e4,data.emg_baseline_e5,...
+             data.emg_baseline_f1,data.emg_baseline_f2,data.emg_baseline_f3,data.emg_baseline_f4,data.emg_baseline_f5];
+        
+        X = X./scales;
+        
+        % make dependant vars:
+        label = zeros(length(chords),1);
+        Y = zeros(length(chords),10);
+        for i = 1:size(chords,1)
+            for j = 1:length(chords(i,:))
+                if chords(i,j) == 1
+                    Y(i,j) = 1;
+                elseif chords(i,j) == 2
+                    Y(i,j+5) = 1;
+                end
+            end
+            label(i) = find(unique_chords==data.chordID(i));
+        end
 
+        % train and test single finger:
+        X_train = X(data.num_fingers==1 & TN~=5,:);
+        Y_train = Y(data.num_fingers==1 & TN~=5,:);
+        X_test = X(data.num_fingers==1 & TN==5,:);
+        Y_test = Y(data.num_fingers==1 & TN==5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+        
+        % train single finger, test multi finger:
+        X_train = X(data.num_fingers==1,:);
+        Y_train = Y(data.num_fingers==1,:);
+        X_test = X(data.num_fingers~=1,:);
+        Y_test = Y(data.num_fingers~=1,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+
+        % train and test overall:
+        X_train = X(TN ~= 5,:);
+        Y_train = Y(TN ~= 5,:);
+        X_test = X(TN == 5,:);
+        Y_test = Y(TN == 5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test);
+        trainingLabels = vec2ind(Y_train')'
+
+        % train and test overall with labels:
+        X_train = X(TN ~= 5,:);
+        Y_train = label(TN ~= 5,:);
+        X_test = X(TN == 5,:);
+        Y_test = label(TN == 5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test,'label',1);
+        fprintf('label: overall acc = %.4f\n',C.acc_test);
+
+        % train and test single finger with labels:
+        X_train = X(data.num_fingers==1 & TN~=5,:);
+        Y_train = label(data.num_fingers==1 & TN~=5,:);
+        X_test = X(data.num_fingers==1 & TN==5,:);
+        Y_test = label(data.num_fingers==1 & TN==5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test,'label',1);
+        fprintf('label: 1f acc = %.4f\n',C.acc_test);
+
+        % only chords with labels:
+        X_train = X(data.num_fingers~=1 & TN~=5,:);
+        Y_train = label(data.num_fingers~=1 & TN~=5,:);
+        X_test = X(data.num_fingers~=1 & TN==5,:);
+        Y_test = label(data.num_fingers~=1 & TN==5,:);
+        C = linear_classify(X_train,Y_train,X_test,Y_test,'label',1);
+        fprintf('label: 1f-chord acc = %.4f\n',C.acc_test);
+
+        varargout{1} = C;
+        
     otherwise
         error('The analysis you entered does not exist!')
 end
