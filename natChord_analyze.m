@@ -314,7 +314,7 @@ switch (what)
         normalize_channels = 0;     % flag to whether normalize the channels by their norms or not.
         sess = 1;
         vararginoptions(varargin,{'subject_name','plot_option','normalize_channels','sess'});
-
+        
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         data = getrow(data, data.sess == sess & data.sn == str2double(subject_name(end-1:end)));
@@ -1274,6 +1274,11 @@ switch (what)
         imagesc(d_emg{2})
         colormap('hot')
         colorbar
+
+    case 'decoding'
+        % linear classification from EMG to chord: 
+        data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
+        
 
     otherwise
         error('The analysis you entered does not exist!')
