@@ -849,7 +849,7 @@ switch (what)
             for i = 1:length(sess)
                 figure;
                 hold on
-                scatter_corr(vecnorm(pattern')', chords_mean_dev(:,i), 'k', 'o')
+                scatter_corr(vecnorm(pattern(n>1,:)')', chords_mean_dev(n>1,i), 'k', 'o')
                 title(sprintf('sess %d',i),'FontSize',my_font.title)
                 xlabel('Norm EMG','FontSize',my_font.xlabel)
                 ylabel('MD','FontSize',my_font.ylabel)
@@ -1276,6 +1276,8 @@ switch (what)
         colorbar
 
     case 'decoding'
+        subject_name = 'subj01';
+        vararginoptions(varargin,{'subject_name'})
         data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
         
         TN = kron((1:5)',ones(1,size(data.BN,1)/5));
@@ -1351,7 +1353,7 @@ switch (what)
         X_test = Y(data.num_fingers==1 & TN == 5,:);
         Y_test = X(data.num_fingers==1 & TN == 5,:);
         C = linear_classify(X_train,Y_train,X_test,Y_test);
-        C.r2
+        C.r
 
         % predict EMG from chordID - chord from 1f:
         X_train = Y(data.num_fingers==1,:);
@@ -1359,7 +1361,7 @@ switch (what)
         X_test = Y(data.num_fingers~=1,:);
         Y_test = X(data.num_fingers~=1,:);
         C = linear_classify(X_train,Y_train,X_test,Y_test);
-        C.r2
+        C.r
 
         % predict EMG from chordID - overall:
         X_train = Y(TN ~= 5,:);
@@ -1367,11 +1369,7 @@ switch (what)
         X_test = Y(TN == 5,:);
         Y_test = X(TN == 5,:);
         C = linear_classify(X_train,Y_train,X_test,Y_test);
-        C.r2
-        figure;
-        imagesc(C.Y_test_pred);
-        figure;
-        imagesc(Y_test);
+        C.r
 
         varargout{1} = C;
         

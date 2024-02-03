@@ -38,6 +38,7 @@ C.acc_train = acc;
 Y_pred = X_test*beta;
 r2 = 1-sum((Y_pred - Y_test).^2,1) ./ (sum((Y_test - mean(Y_test,1)).^2,1));
 C.r2 = mean(r2);
+C.r = corr2(Y_pred,Y_test);
 
 % Accuracy on test data:
 pred_softmax = softmax(Y_pred')';
