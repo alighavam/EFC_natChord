@@ -249,6 +249,10 @@ switch (what)
         wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
         vararginoptions(varargin,{'subject_name','lpf','Fpass_lpf','Fstop_lpf', ...
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
+
+        data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
+        sess = unique(data.sess);
+        sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
         
         % EMG filters:
         hd = emg_filter_designer(fs_emg, 'filter_type', 'bandpass');   % creates my default bpf (20,500)Hz
@@ -263,13 +267,14 @@ switch (what)
             for i = 1:length(subject_name)        
                 % Preprocessing and dealing with the natural EMGs:
                 fprintf("Processing natural EMG data...\n\n")
-                make_natural_emg(subject_name{i},fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+                make_natural_emg(subject_name{i},sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
             end
         % if a single subject as a char was given:
         else
+            
             % Preprocessing and dealing with the natural EMGs:
             fprintf("Processing natural EMG data...\n\n")
-            make_natural_emg(subject_name,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+            make_natural_emg(subject_name,sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
         end
 
     case 'natural_emg_autocorr'
@@ -839,10 +844,10 @@ switch (what)
                 scatter_corr(vecnorm(pattern(n==3,:)')', chords_mean_dev(n==3,i), 'b', 'filled')
                 % 5 finger:
                 scatter_corr(vecnorm(pattern(n==5,:)')', chords_mean_dev(n==5,i), 'k', 'filled')
-                title(sprintf('sess %d',i),'FontSize',my_font.title)
+                title(sprintf('%s , sess %d',subject_name,i),'FontSize',my_font.title)
                 xlabel('Norm EMG','FontSize',my_font.xlabel)
                 ylabel('MD','FontSize',my_font.ylabel)
-                % ylim([0,1])
+                xlim([0,3.6])
                 ylim([0,4])
             end
 
@@ -850,10 +855,10 @@ switch (what)
                 figure;
                 hold on
                 scatter_corr(vecnorm(pattern(n>1,:)')', chords_mean_dev(n>1,i), 'k', 'o')
-                title(sprintf('sess %d',i),'FontSize',my_font.title)
+                title(sprintf('%s , sess %d',subject_name,i),'FontSize',my_font.title)
                 xlabel('Norm EMG','FontSize',my_font.xlabel)
                 ylabel('MD','FontSize',my_font.ylabel)
-                % ylim([0,1])
+                xlim([0,3.6])
                 ylim([0,4])
             end
         end
@@ -1079,9 +1084,9 @@ switch (what)
                 % legend('single finger','','','','','chord','','','')
                 % legend boxoff
     
-                figure;
+                
                 for i = 1:length(unique(C.sess))
-                    subplot(1,2,i)
+                    figure;
                     % single finger:
                     hold on
                     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
@@ -1090,30 +1095,29 @@ switch (what)
                     % 5f chord:
                     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5), 'k', 'o')
 
-                    title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                    title(sprintf('subj%d  , sess %d',sn,i),'FontSize',my_font.title)
                     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
+                    % xlim([-5,25])
                     ylim([0,4])
                 end
-                sgtitle(subject_names(sn,:))
                 legend('1f','','','','','3f','','','','','5f','','','','')
                 legend boxoff
 
-                figure;
                 for i = 1:length(unique(C.sess))
-                    subplot(1,2,i)
+                    figure;
                     % single finger:
                     hold on
                     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1), 'r', 'o')
                     % 3f & 5f chord:
                     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1), 'k', 'o')
 
-                    title(sprintf('log(Slope) (n/d) at n = %d  , sess %d',C.thresh(1),i),'FontSize',my_font.title)
+                    title(sprintf('subj%d  , sess %d',sn,i),'FontSize',my_font.title)
                     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
+                    % xlim([-5,25])
                     ylim([0,4])
                 end
-                sgtitle(subject_names(sn,:))
                 legend('1f','','','','','3&5f','','','','')
                 legend boxoff
 
