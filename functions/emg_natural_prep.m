@@ -205,10 +205,11 @@ switch sampling_option
             tmp_sample = sampled_emg;
 
             % scaling factors:
-            scales = natChord_analyze('get_scale_factor_emg','subject_name',subject_info.participant_id{1});
+            subject_name = subject_info.participant_id{1};
+            scales = get_emg_scales(str2double(subject_name(end-1:end)),str2double(sess(end-1:end)));
             
             % normalizing the natural EMGs:
-            tmp_sample = tmp_sample ./ scales(:,str2double(sess(end-1:end)))';
+            tmp_sample = tmp_sample ./ scales;
             
             % Norm of all samples:
             samples_norm = vecnorm(tmp_sample');
@@ -218,7 +219,7 @@ switch sampling_option
     
             % sampling the sampled EMGs based on mean norm threshold:
             % indices for each electrode that are more than their avg:
-            ind = samples_norm >= avg_norm;
+            ind = samples_norm >= 2*avg_norm;
     
             % sub sampling:
             sampled_emg = sampled_emg(ind,:);
