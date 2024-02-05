@@ -235,6 +235,25 @@ switch (what)
             end
         end
 
+        % Adding measures from EFC1 dataset: 
+        ANA.MD_efc = zeros(size(ANA.MD));
+        ANA.MT_efc = zeros(size(ANA.MD));
+        ANA.RT_efc = zeros(size(ANA.MD));
+        subject_mapping = [subjects , [1,5,2]'];
+        data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
+        chords = unique(ANA.chordID);
+        for i = 1:length(subjects)
+            for j = 1:length(chords)
+                % select part of the data from efc1:
+                subject_efc = subject_mapping(i,2);
+                tmp = getrow(data_efc1,data_efc1.sn==subject_efc & data_efc1.sess>=3 & data_efc1.chordID==chords(j));
+    
+                ANA.MD_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MD);
+                ANA.MT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MT);
+                ANA.RT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.RT);
+            end
+        end
+
         dsave(fullfile(project_path,'analysis','natChord_chord.tsv'),ANA);
 
     case 'make_natural_dist'
@@ -243,7 +262,7 @@ switch (what)
         lpf = 0;                    % flag to do lowpass filtering;
         Fpass_lpf = 20;
         Fstop_lpf = 30;
-        natural_window_size = 100;      % window size to sample natural EMG
+        natural_window_size = 10;      % window size to sample natural EMG
         sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
         natural_window_type = 'Rect';   % sampling window type for natural EMGs.
         wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
@@ -807,7 +826,7 @@ switch (what)
         chords_mean_dev = [];
         for j = 1:length(sess)
             for i = 1:length(chords)
-                chords_mean_dev(i,j) = data.MD(data.chordID==chords(i) & data.sess==sess);
+                chords_mean_dev(i,j) = data.MD_efc(data.chordID==chords(i) & data.sess==sess);
             end
         end
         
@@ -834,6 +853,18 @@ switch (what)
             end
         end
         
+        % making the output of the model:
+        out = [];
+        for i = 1:length(sess)
+            for j = 1:length(chords)
+                tmp.sess = i;
+                tmp.num_fingers = n(j);
+                tmp.chordID = chords(j);
+                tmp.mag = vecnorm(pattern(chords==chords(j),:)')';
+                out = addstruct(out,tmp,'row',1);
+            end
+        end
+
         if (plot_option)
             for i = 1:length(sess)
                 figure;
@@ -863,7 +894,7 @@ switch (what)
             end
         end
         
-        varargout{1} = C;
+        varargout{1} = out;
 
     case 'nSphere_numSamples_vs_radius'
         subject_name = 'subj01';
@@ -1006,7 +1037,7 @@ switch (what)
                 chords_mean_dev = zeros(length(chords),1);
                 for k = 1:length(chords)
                     row = data.sn==subjects(sn) & data.chordID==chords(k);
-                    chords_mean_dev(k) = data.MD(row & data.sess==sess(j));
+                    chords_mean_dev(k) = data.MD_efc(row & data.sess==sess(j));
                 end
 
                 % container for the each session's dataframe:
@@ -1099,7 +1130,7 @@ switch (what)
                     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
                     % xlim([-5,25])
-                    ylim([0,4])
+                    % ylim([0,4])
                 end
                 legend('1f','','','','','3f','','','','','5f','','','','')
                 legend boxoff
@@ -1116,7 +1147,7 @@ switch (what)
                     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
                     % xlim([-5,25])
-                    ylim([0,4])
+                    % ylim([0,4])
                 end
                 legend('1f','','','','','3&5f','','','','')
                 legend boxoff
@@ -1376,6 +1407,61 @@ switch (what)
         C.r
 
         varargout{1} = C;
+
+    case 'test_nSphere_magnitude'
+        C = natChord_analyze('nSphere_model','d_type','project_to_nSphere','n_thresh',1,'sampling_option','whole_thresholded','plot_option',0);
+        subjects = unique(C.sn);
+
+        out = [];
+        for sn = 1:length(subjects)
+            mag = natChord_analyze('chord_magnitude_difficulty_model','subject_name',['subj' sprintf('%02d',subjects(sn))],'plot_option',0);
+            for i = 1:length(unique(C.sess))
+                % 1f:
+                MD_1f = C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1);
+                log_1f = C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==1);
+                mag_1f = mag.mag(mag.sess==i & mag.num_fingers==1);
+
+                % 3f:
+                MD_3f = C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==3);
+                log_3f = C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==3);
+                mag_3f = mag.mag(mag.sess==i & mag.num_fingers==3);
+
+                % 5f:
+                MD_5f = C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5);
+                log_5f = C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5);
+                mag_5f = mag.mag(mag.sess==i & mag.num_fingers==5);
+
+                % all chords:
+                MD_chords = C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1);
+                log_chords = C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers>1);
+                mag_chords = mag.mag(mag.sess==i & mag.num_fingers>1);
+
+                % merged model:
+                mdl_3f = fitlm([log_3f,mag_3f], MD_3f);
+                mdl_5f = fitlm([log_5f,mag_5f], MD_5f);
+                mdl_chords = fitlm([log_chords,mag_chords], MD_chords);
+                
+                tmp.sn = subjects(sn);
+                tmp.sess = i;
+
+                tmp.mag_corr_3f = corr(mag_3f,MD_3f);
+                tmp.mag_corr_5f = corr(mag_5f,MD_5f);
+                tmp.mag_corr_chords = corr(mag_chords,MD_chords);
+
+                tmp.likelihood_corr_3f = corr(log_3f,MD_3f);
+                tmp.likelihood_corr_5f = corr(log_5f,MD_5f);
+                tmp.likelihood_corr_chords = corr(log_chords,MD_chords);
+
+                tmp.merged_corr_3f = corr(mdl_3f.Fitted,MD_3f);
+                tmp.merged_corr_5f = corr(mdl_5f.Fitted,MD_5f);
+                tmp.merged_corr_chords = corr(mdl_chords.Fitted,MD_chords);
+
+                out = addstruct(out,tmp,'row',1);
+            end
+        end
+
+        varargout{1} = out;
+        
         
     otherwise
         error('The analysis you entered does not exist!')
