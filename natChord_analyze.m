@@ -1152,9 +1152,6 @@ switch (what)
         varargout{2} = C;
         
 
-    case 'model_testing'
-        
-
     case 'chord_distance_matrix'
         subject_name = 'subj01';
         normalize_channels = 1;
@@ -1517,6 +1514,8 @@ switch (what)
 
         varargout{1} = corr_struct;
         varargout{2} = C;
+
+    case 'model_testing'
         
     otherwise
         error('The analysis you entered does not exist!')
