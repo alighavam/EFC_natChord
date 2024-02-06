@@ -219,7 +219,7 @@ switch sampling_option
     
             % sampling the sampled EMGs based on mean norm threshold:
             % indices for each electrode that are more than their avg:
-            ind = samples_norm >= 3*avg_norm;
+            ind = samples_norm >= 2*avg_norm;
     
             % sub sampling:
             sampled_emg = sampled_emg(ind,:);
@@ -228,8 +228,6 @@ switch sampling_option
             dist.partition(i,1) = i;
             dist.dist{i,1} = sampled_emg;
         end
-
-        
 
     case 'peaks'
 
