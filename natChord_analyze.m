@@ -247,7 +247,7 @@ switch (what)
                 % select part of the data from efc1:
                 subject_efc = subject_mapping(i,2);
                 tmp = getrow(data_efc1,data_efc1.sn==subject_efc & data_efc1.sess>=3 & data_efc1.chordID==chords(j));
-    
+                
                 ANA.MD_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MD);
                 ANA.MT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MT);
                 ANA.RT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.RT);
@@ -829,86 +829,88 @@ switch (what)
         xticks(1:length(mean_channels))
         xticklabels(emg_locs_names)
 
-    case 'chord_magnitude_difficulty_model'
-        subject_name = 'subj01';
+    case 'chord_magnitude'
         plot_option = 1;
-        vararginoptions(varargin,{'subject_name','plot_option'});
+        measure = 'MD_efc';
+        vararginoptions(varargin,{'subject_name','plot_option','measure'});
 
-        % loading subject data:
+        % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-        data = getrow(data,data.sn==str2double(subject_name(end-1:end)));
+        subj = unique(data.sn);
         sess = unique(data.sess);
         num_fingers = unique(data.num_fingers);
         
-        % getting avg mean deviation of chords:
-        chords_mean_dev = [];
-        for j = 1:length(sess)
-            [~, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1,'sess',1);
-            for i = 1:length(chords)
-                chords_mean_dev(i,j) = data.MD_efc(data.chordID==chords(i) & data.sess==sess);
-            end
-        end
+        % getting the values of measure:
+        values = eval(['data.' measure]);
         
         % making the output of the model:
         out = [];
-        for i = 1:length(sess)
-            % calculating avg chord patterns:
-            [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',1,'sess',sess(i));
-            n = get_num_active_fingers(chords);
-
-            for j = 1:length(chords)
-                tmp.sess = i;
-                tmp.num_fingers = n(j);
-                tmp.chordID = chords(j);
-                tmp.mag = vecnorm(pattern(chords==chords(j),:)')';
-                tmp.MD = chords_mean_dev(j,i);
-                out = addstruct(out,tmp,'row',1);
-            end            
+        for sn = 1:length(subj)
+            for i = 1:length(sess)
+                % calculating avg chord patterns:
+                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' sprintf('%.02d',subj(sn))],'plot_option',0,'normalize_channels',1,'sess',sess(i));
+                n = get_num_active_fingers(chords);
+                
+                for j = 1:length(chords)
+                    tmp.sn = subj(sn);
+                    tmp.sess = i;
+                    tmp.num_fingers = n(j);
+                    tmp.chordID = chords(j);
+                    tmp.mag = vecnorm(pattern(chords==chords(j),:)')';
+                    tmp.measure = values(data.chordID==chords(j) & data.sn==subj(sn) & data.sess==sess(i));
+                    out = addstruct(out,tmp,'row',1);
+                end            
+            end
         end
 
         % partial correlation between MD and magnitude considering
         % number of fingers effect:
         C  = [];
-        for i = 1:length(sess)
-            X = out.mag(out.sess==i);
-            Y = out.MD(out.sess==i);
-            Z = make_design_matrix(out.chordID(out.sess==i),'n_fing');
-            [rho,p,resX,resY] = partial_corr(X,Y,Z);
-            
-            tmp.sess = i;
-            tmp.rho = rho;
-            tmp.p = p;
-            tmp.res_mag = {resX};
-            tmp.res_MD = {resY};
-            C = addstruct(C,tmp,'row',1);
+        for sn = 1:length(subj)
+            for i = 1:length(sess)
+                X = out.mag(out.sess==i & out.sn==subj(sn));
+                Y = out.measure(out.sess==i & out.sn==subj(sn));
+                Z = make_design_matrix(out.chordID(out.sess==i & out.sn==subj(sn)),'n_fing');
+                [rho,p,resX,resY] = partial_corr(X,Y,Z);
+                
+                tmp.sn = subj(sn);
+                tmp.sess = i;
+                tmp.rho = rho;
+                tmp.p = p;
+                tmp.res_mag = {resX};
+                tmp.res_measure = {resY};
+                C = addstruct(C,tmp,'row',1);
+            end
         end
 
         if (plot_option)
-            for i = 1:length(sess)
-                figure;
-                hold on;
-                % single finger:
-                scatter_corr(vecnorm(pattern(n==1,:)')', chords_mean_dev(n==1,i), 'r', 'o'); hold on
-                % 3 finger:
-                scatter_corr(vecnorm(pattern(n==3,:)')', chords_mean_dev(n==3,i), 'b', 'filled')
-                % 5 finger:
-                scatter_corr(vecnorm(pattern(n==5,:)')', chords_mean_dev(n==5,i), 'k', 'filled')
-                title(sprintf('%s , sess %d',subject_name,i),'FontSize',my_font.title)
-                xlabel('Norm EMG','FontSize',my_font.xlabel)
-                ylabel('MD','FontSize',my_font.ylabel)
-                xlim([0,3.6])
-                ylim([0,4])
-            end
-
-            for i = 1:length(sess)
-                figure;
-                hold on
-                scatter_corr(C.res_mag{C.sess==i}, C.res_MD{C.sess==i}, 'k', 'o')
-                title(sprintf('%s , sess %d',subject_name,i),'FontSize',my_font.title)
-                xlabel('Norm EMG (n regressed out)','FontSize',my_font.xlabel)
-                ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
-                xlim([-1.5,1.5])
-                ylim([-2,2])
+            for sn = 1:length(subj)
+                for i = 1:length(sess)
+                    figure;
+                    hold on;
+                    % single finger:
+                    scatter_corr(out.mag(out.num_fingers==1 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==1 & out.sess==i & out.sn==subj(sn)), 'r', 'o'); hold on
+                    % 3 finger:
+                    scatter_corr(out.mag(out.num_fingers==3 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==3 & out.sess==i & out.sn==subj(sn)), 'b', 'filled')
+                    % 5 finger:
+                    scatter_corr(out.mag(out.num_fingers==5 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==5 & out.sess==i & out.sn==subj(sn)), 'k', 'filled')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
+                    xlabel('Norm EMG','FontSize',my_font.xlabel)
+                    ylabel('MD','FontSize',my_font.ylabel)
+                    xlim([0,3.6])
+                    ylim([0,4])
+                end
+    
+                for i = 1:length(sess)
+                    figure;
+                    hold on
+                    scatter_corr(C.res_mag{C.sess==i & C.sn==subj(sn)}, C.res_measure{C.sess==i & C.sn==subj(sn)}, 'k', 'o')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
+                    xlabel('Norm EMG (n regressed out)','FontSize',my_font.xlabel)
+                    ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
+                    xlim([-1.5,1.5])
+                    ylim([-2,2])
+                end
             end
         end
         
@@ -1515,8 +1517,205 @@ switch (what)
         varargout{1} = corr_struct;
         varargout{2} = C;
 
-    case 'model_testing'
+    case 'model_testing_all'
+        % handling input arguments:
+        measure = 'MD_efc';
+        model_names = {'n_fing','n_fing+transition','n_fing+nSphere','additive+2fing_adj','magnitude','n_fing+magnitude','n_fing+nSphere+magnitude'};
+        vararginoptions(varargin,{'chords','sess','measure','model_names'})
         
+        % loading data:
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords = unique(data.chordID);
+        subj = unique(data.sn);
+        sess = unique(data.sess);
+        
+        % getting the values of measure:
+        values_tmp = eval(['data.' measure]);
+        
+        % getting the average of sessions for every subj:
+        values = zeros(length(chords),length(subj));
+        for i = 1:length(subj)
+            % avg with considering nan values since subjects might have
+            % missed all 5 repetitions in one session:
+            tmp = [];
+            for j = 1:length(sess)
+                tmp = [tmp, values_tmp(data.sess==sess(j) & data.sn==subj(i))];
+            end
+            values(:,i) = mean(tmp,2,'omitmissing');
+        end
+        
+        % modelling the difficulty for all chords.
+        C = [];
+        % loop on subjects and model testing:
+        for sn = 1:length(subj)
+            % values of 'not-out' subjects, Nx1 vector:
+            y = values_tmp(data.sess==sess(1) & data.sn==subj(sn));
+            
+            % loop on models to be tested:
+            for i_mdl = 1:length(model_names)
+                % getting design matrix for model:
+                X = make_design_matrix(chords,model_names{i_mdl},'sn',subj(sn));
+
+                % check design matrix's Rank:
+                is_full_rank = rank(X) == size(X,2);
+
+                % training the model:
+                [B,STATS] = svd_linregress(y,X);
+
+                % testing the model:
+                y_pred = X*B;
+                r = corr(y_pred,y);
+                SSR = sum((y_pred-y).^2);
+                SST = sum((y-mean(y)).^2);
+                r2 = 1 - SSR/SST;
+
+                % storing the results:
+                C_tmp.model = model_names(i_mdl);
+                C_tmp.is_full_rank = is_full_rank;
+                C_tmp.B = {B};
+                C_tmp.stats = {STATS};
+                C_tmp.r = r;
+                C_tmp.r2 = r2;
+
+                C = addstruct(C,C_tmp,'row',1);
+            end
+        end
+
+        % PLOT - regression results:
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 3.5 3],'Box','off');
+        for j = 1:length(model_names)
+            % getting cross validated r:
+            r = C.r(strcmp(C.model,model_names{j}));
+            
+            r_avg(j) = mean(r);
+            r_sem(j) = std(r)/sqrt(length(r));
+        end
+        drawline(1,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':'); hold on;
+        plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
+        errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
+        scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
+        box off
+        h = gca;
+        h.YTick = 0:0.25:1;
+        h.XTick = 1:length(model_names);
+        h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
+        h.XAxis.FontSize = my_font.tick_label;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel('r','FontSize',my_font.ylabel)
+        ylim([0, 1.05])
+        xlim([0.5,length(model_names)+0.5])
+        fontname("Arial")
+        
+        varargout{1} = C;
+
+    case 'repetition_effect'
+        measure = 'MD';
+        vararginoptions(varargin,{'chords','measure'})
+        
+        data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        chords = unique(data.chordID);
+        n = get_num_active_fingers(chords);
+
+        % getting the values of measure:
+        values = eval(['data.' measure]);
+        values(values==-1) = NaN;
+        
+        % putting trials in rows:
+        n_fing = reshape(data.num_fingers,5,[]);
+        sess = reshape(data.sess,5,[]);
+        values = reshape(values,5,[]);
+        subj = reshape(data.sn,5,[]);
+        chordID = reshape(data.chordID,5,[]);
+        repetitions = 5;
+
+        % getting averages within each session and n_fing:
+        n_fing = n_fing(1,:);
+        n_fing_unique = unique(n_fing);
+        chordID = chordID(1,:);
+        sess = sess(1,:);
+        subj = subj(1,:);
+        subj_unique = unique(subj);
+        C = [];
+        % loop on n_fing:
+        for i = 1:length(unique(n_fing_unique))
+            for sn = 1:length(subj_unique)
+                % variable to hold the values of all the repetitions of
+                % the chords. Chords are stacked on top of each other.
+                % Meaning that each row of the tmp_container will be
+                % a specific chord and columns are all the repetitions.
+                % Therefore, number of columns will be 'repetition*number of times chord was visited in the session'
+                tmp_container = [];
+                chords_tmp = chords(n==n_fing_unique(i));
+                for k = 1:length(chords_tmp)
+                    % getting all the data that chord was repeated. the
+                    % columns are the times that the chord was
+                    % repeated in each session:
+                    values_tmp = values(:, subj==subj_unique(sn) & n_fing==n_fing_unique(i) & chordID==chords_tmp(k));
+                    num_visited = size(values_tmp,2);
+                    if (num_visited==4)
+                        values_tmp = values_tmp(:,1:2);
+                    end
+                    tmp_container = [tmp_container ; values_tmp(:)'];
+                end
+                
+                tmp = [];
+                num_visited = size(tmp_container,2)/repetitions;
+                for k = 1:num_visited
+                    tmp.num_fingers = n_fing_unique(i);
+                    tmp.sn = subj_unique(sn);
+                    % the time that the chord was visited during the
+                    % sessions.
+                    tmp.visit = k;
+                    % size(tmp_container)
+                    tmp.value_subj(1,:) = mean(tmp_container(:,(k-1)*repetitions+1:k*repetitions),1,'omitmissing'); 
+                    C = addstruct(C,tmp,'row',1);
+                end
+            end
+        end
+
+        for i = 1:length(subj_unique)
+            for i = 1:length(n_fing_unique)
+
+            end
+        end
+        
+        % PLOT - repetition trends across visits and sessions:
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+        visits = unique(C.visit);
+        offset_size = 5;
+        x_offset = 0:offset_size:5*(length(visits)-1);
+        for i = 1:length(n_fing_unique)
+            for k = 1:length(visits)
+                row = C.num_fingers==n_fing_unique(i) & C.visit==k;
+                plot((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1),'Color',colors_blue(n_fing_unique(i),:),'LineWidth',1); hold on;
+                % errorbar((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), mean(C.sem(C.num_fingers==i & C.sess==j, :),1), 'CapSize', 0, 'Color', colors_blue(n_fing_unique(i),:));
+                scatter((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), 10,'MarkerFaceColor',colors_blue(n_fing_unique(i),:),'MarkerEdgeColor',colors_blue(n_fing_unique(i),:))
+            end
+        end
+        box off
+        h = gca;
+        % h.YTick = 100:150:600; % RT
+        % h.YTick = 0:1000:3000; % MT
+        % h.YTick = 0.5:1:2.5; % MD
+        h.XTick = 5*(1:length(visits)) - 2;
+        xlabel('visit','FontSize',my_font.xlabel)
+        h.XTickLabel = {'1','2'};
+        h.XAxis.FontSize = my_font.tick_label;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel(measure,'FontSize',my_font.ylabel)
+        % ylabel([measure ' [ms]'],'FontSize',my_font.ylabel)
+        ylim([0, 2.8]) % MD
+        % ylim([0, 650]) % RT
+        % ylim([0, 2000]) % MT
+        xlim([0,11])
+        % title('Repetition Effect','FontSize',my_font.title)
+        fontname("Arial")
+
+        varargout{1} = C;
+
+
     otherwise
         error('The analysis you entered does not exist!')
 end
