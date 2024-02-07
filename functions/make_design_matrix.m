@@ -1,4 +1,7 @@
-function X = make_design_matrix(chords,model_name)
+function X = make_design_matrix(chords,model_name,varargin)
+sn = 1; % subjects to get certain methods for
+sess = 1;
+vararginoptions(varargin,{'sn','sess'})
 
 switch model_name
     case 'n_fing'
@@ -77,6 +80,14 @@ switch model_name
             [idx,~] = find(groups==chords(i));
             X(i,idx(1)) = 1;
         end
+
+    case 'magnitude'
+        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
+        X = out.mag(out.sn==sn & out.sess==sess);
+
+    case 'nSphere'
+        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
+        X = C.log_slope(C.sn==sn & C.sess==sess);
 
     otherwise
         names = strsplit(model_name,'+');
