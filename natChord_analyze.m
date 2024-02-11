@@ -23,11 +23,11 @@ colors_bold = [colors_red(5,:) ; colors_blue(5,:) ; colors_cyan(5,:) ; colors_gr
 colors_fade = [colors_red(3,:) ; colors_blue(3,:) ; colors_cyan(3,:) ; colors_gray(3,:) ; colors_random(1,:)];
 
 % figure properties:
-my_font.xlabel = 11;
-my_font.ylabel = 11;
-my_font.title = 12;
-my_font.tick_label = 9;
-my_font.legend = 9;
+my_font.xlabel = 10;
+my_font.ylabel = 10;
+my_font.title = 11;
+my_font.tick_label = 8;
+my_font.legend = 8;
 
 switch (what)
     case 'subject_routine'
@@ -1521,7 +1521,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD_efc';
         model_names = {'n_fing','n_fing+transition','n_fing+nSphere','additive+2fing_adj','magnitude','n_fing+magnitude','n_fing+nSphere+magnitude'};
-        vararginoptions(varargin,{'chords','sess','measure','model_names'})
+        vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -1689,14 +1689,14 @@ switch (what)
         for i = 1:length(n_fing_unique)
             for k = 1:length(visits)
                 row = C.num_fingers==n_fing_unique(i) & C.visit==k;
-                plot((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1),'Color',colors_blue(n_fing_unique(i),:),'LineWidth',1); hold on;
+                plot((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1),'Color',colors_red(n_fing_unique(i),:),'LineWidth',1); hold on;
                 % errorbar((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), mean(C.sem(C.num_fingers==i & C.sess==j, :),1), 'CapSize', 0, 'Color', colors_blue(n_fing_unique(i),:));
-                scatter((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), 10,'MarkerFaceColor',colors_blue(n_fing_unique(i),:),'MarkerEdgeColor',colors_blue(n_fing_unique(i),:))
+                scatter((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), 10,'MarkerFaceColor',colors_red(n_fing_unique(i),:),'MarkerEdgeColor',colors_red(n_fing_unique(i),:))
             end
         end
         box off
         h = gca;
-        % h.YTick = 100:150:600; % RT
+        h.YTick = 100:150:600; % RT
         % h.YTick = 0:1000:3000; % MT
         % h.YTick = 0.5:1:2.5; % MD
         h.XTick = 5*(1:length(visits)) - 2;
@@ -1706,9 +1706,9 @@ switch (what)
         h.YAxis.FontSize = my_font.tick_label;
         ylabel(measure,'FontSize',my_font.ylabel)
         % ylabel([measure ' [ms]'],'FontSize',my_font.ylabel)
-        ylim([0, 2.8]) % MD
-        % ylim([0, 650]) % RT
-        % ylim([0, 2000]) % MT
+        % ylim([0.3, 2.8]) % MD
+        ylim([0, 650]) % RT
+        % ylim([0, 3200]) % MT
         xlim([0,11])
         % title('Repetition Effect','FontSize',my_font.title)
         fontname("Arial")
