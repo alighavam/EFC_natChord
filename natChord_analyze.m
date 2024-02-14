@@ -1017,10 +1017,10 @@ switch (what)
         varargout{2} = radius_vec;
 
     case 'nSphere_model'
-        d_type = 'Euclidean';
+        d_type = 'project_to_nSphere';
         lambda = [];
         n_thresh = 5;
-        sampling_option = 'whole_sampled';
+        sampling_option = 'whole_thresholded';
         plot_option = 1;
         vararginoptions(varargin,{'d_type','lambda','sampling_option','n_thresh','plot_option'})
         
