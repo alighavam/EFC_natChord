@@ -121,3 +121,7 @@ switch model_name
         %     X(:,14) = [];
         % end
 end
+
+cols_with_all_zeros = find(all(X==0)); % all zeros
+X(:,cols_with_all_zeros) = [];
+
