@@ -670,6 +670,8 @@ switch (what)
 
         varargout{1} = [v_g, v_gs, v_gse];
 
+
+
     case 'visualize_natural_emg'
         % handling input arguments:
         sampling_option = 'whole_sampled';
@@ -1080,7 +1082,6 @@ switch (what)
                     % storing the information:
                     tmp.sn(cnt,1) = subjects(sn);
                     tmp.sess(cnt,1) = sess(j);
-                    tmp.partition(cnt,1) = i;
                     tmp.chordID(cnt,1) = chords(k);
                     tmp.num_fingers(cnt,1) = n(k);
                     tmp.MD(cnt,1) = chords_mean_dev(k);
@@ -1097,8 +1098,11 @@ switch (what)
 
         % correlation of MD and log_slope:
         corr_struct = [];
+        log_slope_n = [];
+        MD_n = [];
         for sn = 1:length(subjects)
             for i = 1:length(unique(C.sess))
+                tmp = [];
 
                 % correlation while regressing out the num finger effect:
                 X = C.log_slope(C.sn==subjects(sn) & C.sess==i);
@@ -1110,11 +1114,15 @@ switch (what)
                 tmp.sess = i;
                 tmp.rho_n = rho_n;
                 tmp.p_n = p_n;
-                tmp.res_log_slope_n = {res_log_slope_n};
-                tmp.res_MD_n = {res_MD_n};
+                log_slope_n = [log_slope_n;res_log_slope_n];
+                MD_n = [MD_n;res_MD_n];
                 corr_struct = addstruct(corr_struct,tmp,'row',1);
             end
         end
+
+        % add log_slope_n and MD_n to C:
+        C.log_slope_n = log_slope_n;
+        C.MD_n = MD_n;
 
         if (plot_option)
             for sn = 1:length(subjects)
@@ -1140,7 +1148,7 @@ switch (what)
                 for i = 1:length(unique(C.sess))
                     figure;
                     hold on
-                    scatter_corr(corr_struct.res_log_slope_n{corr_struct.sn==subjects(sn) & corr_struct.sess==i}, corr_struct.res_MD_n{corr_struct.sn==subjects(sn) & corr_struct.sess==i}, 'k', 'o')
+                    scatter_corr(C.log_slope_n(C.sn==subjects(sn) & C.sess==i), C.MD_n(C.sn==subjects(sn) & C.sess==i), 'k', 'o')
                     title(sprintf('subj%d  , sess %d',sn,i),'FontSize',my_font.title)
                     xlabel('log(Slope (n/d)) , n regressed out','FontSize',my_font.xlabel)
                     ylabel('MD , n regressed out','FontSize',my_font.ylabel)
@@ -1715,7 +1723,60 @@ switch (what)
 
         varargout{1} = C;
 
+    
+    case 'likelihood_reliability'
+        measure = 'log_slope';
+        centered = 1;
+        vararginoptions(varargin,{'measure','centered'})
 
+        [~,C] = natChord_analyze('nSphere_model','plot_option',0);
+
+        % getting the values of measure:
+        values = eval(['C.' measure]);
+        
+        % reliability estimation:
+        [v_g, v_gs, v_gse] = reliability_var(values, C.sn, C.sess, ...
+            'cond_vec', C.num_fingers, 'centered', centered);
+        
+        % plot:
+        y = [];
+        figure;
+        ax1 = axes('Units','centimeters', 'Position', [2 2 4 4],'Box','off');
+        for i = 1:length(unique(C.num_fingers))
+            y(i,:) = [v_g{i}/v_gse{i} (v_gs{i}-v_g{i})/v_gse{i} (v_gse{i}-v_gs{i})/v_gse{i}];
+            b = bar(i,y(i,:),'stacked','FaceColor','flat','BarWidth',0.8);
+            b(1).CData = colors_blue(5,:);   % global var
+            b(2).CData = colors_red(3,:);  % subj var
+            b(3).CData = [0.8 0.8 0.8];  % noise var
+            b(1).EdgeColor = [1 1 1];
+            b(2).EdgeColor = [1 1 1];
+            b(3).EdgeColor = [1 1 1];
+            b(1).LineWidth = 1;
+            b(2).LineWidth = 1;
+            b(3).LineWidth = 1;
+            hold on
+        end
+        drawline(1,'dir','horz','color',[0.7 0.7 0.7])
+        % drawline(0,'dir','horz','color',[0.7 0.7 0.7])
+        h = gca;
+        h.XTick = 1:length(unique(C.num_fingers));
+        h.XTickLabel = num2str(unique(C.num_fingers));
+        h.YTick = 0:0.2:1;
+        box off;
+        % title([measure ' Reliability'],'FontSize',my_font.title)
+        xlabel('num fingers','FontSize',my_font.xlabel)
+        ylabel('percent variance','FontSize',my_font.ylabel)
+        % lgd = legend('global','subject','noise');
+        % legend boxoff
+        % fontsize(lgd,6,'points')
+        ylim([0,1.1])
+        xlim([0.3,3.7])
+        h.XAxis.FontSize = my_font.tick_label;
+        h.YAxis.FontSize = my_font.tick_label;
+        fontname("Arial")
+
+        varargout{1} = [v_g, v_gs, v_gse];
+    
     otherwise
         error('The analysis you entered does not exist!')
 end
