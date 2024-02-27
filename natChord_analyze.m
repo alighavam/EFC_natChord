@@ -239,7 +239,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2]'];
+        subject_mapping = [subjects , [1,5,2,4]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -262,10 +262,10 @@ switch (what)
         lpf = 0;                    % flag to do lowpass filtering;
         Fpass_lpf = 20;
         Fstop_lpf = 30;
-        natural_window_size = 50;      % window size to sample natural EMG
+        natural_window_size = 20;      % window size to sample natural EMG
         sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
         natural_window_type = 'Rect';   % sampling window type for natural EMGs.
-        wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
+        wn_spacing = 10;                 % sampling spacing for the 'whole_sampled' option.
         vararginoptions(varargin,{'subject_name','lpf','Fpass_lpf','Fstop_lpf', ...
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
@@ -834,7 +834,7 @@ switch (what)
     case 'chord_magnitude'
         plot_option = 1;
         measure = 'MD_efc';
-        vararginoptions(varargin,{'subject_name','plot_option','measure'});
+        vararginoptions(varargin,{'plot_option','measure'});
 
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
