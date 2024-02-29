@@ -1528,7 +1528,7 @@ switch (what)
     case 'model_testing_all'
         % handling input arguments:
         measure = 'MD_efc';
-        model_names = {'n_fing','n_fing+transition','n_fing+nSphere','additive+2fing_adj','magnitude','n_fing+magnitude','n_fing+nSphere+magnitude'};
+        model_names = {'n_fing+transition','n_fing+nSphere','additive+2fing_adj','magnitude','n_fing+magnitude','n_fing+nSphere+magnitude'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
