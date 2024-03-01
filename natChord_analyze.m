@@ -1776,7 +1776,139 @@ switch (what)
         fontname("Arial")
 
         varargout{1} = [v_g, v_gs, v_gse];
-    
+
+    case 'model_testing_all_efc1'
+        % handling input arguments:
+        measure = 'MD';
+        sess = [3,4];
+        model_names = {'n_fing+transition','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg'};
+        vararginoptions(varargin,{'chords','measure','model_names'})
+        
+        % loading data:
+        chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords_natChord = unique(chords_natChord.chordID);
+        data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
+        data = getrow(data,ismember(data.chordID,chords_natChord));
+        chords = unique(data.chordID);
+        subj = unique(data.sn);
+        
+        % getting the values of measure:
+        values_tmp = eval(['data.' measure]);
+        
+        % getting the average of sessions for every subj:
+        values = zeros(length(chords),length(subj));
+        for i = 1:length(subj)
+            % avg with considering nan values since subjects might have
+            % missed all 5 repetitions in one session:
+            values(:,i) = mean([values_tmp(data.sess==sess(1) & data.sn==subj(i)),values_tmp(data.sess==sess(2) & data.sn==subj(i))],2,'omitmissing');
+        end
+
+        % modelling the difficulty for all chords.
+        C = [];
+        % loop on subjects and regression with leave-one-out:
+        for sn = 1:length(subj)
+            % values of 'not-out' subjects, Nx1 vector:
+            y_train = values(:,setdiff(1:length(subj),sn));
+            y_train = y_train(:);
+
+            % avg of 'out' subject:
+            y_test = values(:,sn);
+
+            % loop on models to be tested:
+            for i_mdl = 1:length(model_names)
+                % getting design matrix for model:
+                X = make_design_matrix(repmat(chords,length(subj)-1,1),model_names{i_mdl});
+
+                % check design matrix's Rank:
+                is_full_rank = rank(X) == size(X,2);
+
+                % training the model:
+                % [B,STATS] = linregress(y_train,X,'intercept',0);
+                [B,STATS] = svd_linregress(y_train,X);
+
+                % testing the model:
+                X_test = make_design_matrix(chords,model_names{i_mdl});
+                y_pred = X_test * B;
+                r = corr(y_pred,y_test);
+                SSR = sum((y_pred-y_test).^2);
+                SST = sum((y_test-mean(y_test)).^2);
+                r2 = 1 - SSR/SST;
+
+                % storing the results:
+                C_tmp.sn_out = sn;
+                C_tmp.model = model_names(i_mdl);
+                C_tmp.is_full_rank = is_full_rank;
+                C_tmp.B = {B};
+                C_tmp.stats = {STATS};
+                C_tmp.r = r;
+                C_tmp.r2 = r2;
+
+                C = addstruct(C,C_tmp,'row',1);
+            end
+        end
+        
+        % stats between models:
+        stats = [];
+        for i = 1:length(model_names)-1
+            r1 = C.r(strcmp(C.model,model_names{i}));
+            for j = i+1:length(model_names)
+                r2 = C.r(strcmp(C.model,model_names{j}));
+                % paired t-test, one-tail r2>r1:
+                [t,p] = ttest(r2,r1,1,'paired');
+                tmp.models = {model_names{i},model_names{j}};
+                tmp.t = t;
+                tmp.p = p;
+                stats = addstruct(stats,tmp,'row',1);
+            end
+        end
+
+
+        % getting noise ceiling:
+        % [~,corr_struct] = efc1_analyze('selected_chords_reliability','blocks',[(sess(1)-1)*12+1 sess(2)*12],'chords',chords,'plot_option',0);
+        % if (strcmp(measure,'MD'))
+        %     noise_ceil = mean(corr_struct.MD);
+        % elseif (strcmp(measure,'MT'))
+        %     noise_ceil = mean(corr_struct.MT);
+        % else
+        %     noise_ceil = mean(corr_struct.RT);
+        % end
+        noise_ceil = 1;
+
+        for i = 1:length(model_names)
+            r = C.r(strcmp(C.model,model_names{i}));
+            fprintf('ttest: model %s different from noise ceiling:\n',model_names{i})
+            ttest(r-noise_ceil,[],2,'onesample')
+        end
+
+        % PLOT - regression results:
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 3.5 3],'Box','off');
+        for j = 1:length(model_names)
+            % getting cross validated r:
+            r = C.r(strcmp(C.model,model_names{j}));
+            
+            r_avg(j) = mean(r);
+            r_sem(j) = std(r)/sqrt(length(r));
+        end
+        drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':'); hold on;
+        plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
+        errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
+        scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
+        box off
+        h = gca;
+        h.YTick = 0:0.25:1;
+        h.XTick = 1:length(model_names);
+        h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
+        h.XAxis.FontSize = my_font.tick_label;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel('r','FontSize',my_font.ylabel)
+        ylim([0, 1.05])
+        xlim([0.5,length(model_names)+0.5])
+        fontname("Arial")
+
+        varargout{1} = C;
+        varargout{2} = stats;
+
     otherwise
         error('The analysis you entered does not exist!')
 end
