@@ -88,6 +88,24 @@ switch model_name
     case 'nSphere'
         [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
         X = C.log_slope(C.sn==sn & C.sess==sess);
+    
+    case 'nSphere_avg'
+        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
+        sn_unique = unique(C.sn);
+        avg_log_slope = 0;
+        for i = 1:length(sn_unique)
+            avg_log_slope = avg_log_slope + C.log_slope(C.sn==sn_unique(i) & C.sess==sess)/length(sn_unique);
+        end
+        X = repmat(avg_log_slope,length(chords)/length(avg_log_slope),1);
+    
+    case 'magnitude_avg'
+        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
+        sn_unique = unique(out.sn);
+        avg_magnitude = 0;
+        for i = 1:length(sn_unique)
+            avg_magnitude = avg_magnitude + out.mag(out.sn==sn_unique(i) & out.sess==sess)/length(sn_unique);
+        end
+        X = repmat(avg_magnitude,length(chords)/length(avg_magnitude),1);
 
     otherwise
         names = strsplit(model_name,'+');
