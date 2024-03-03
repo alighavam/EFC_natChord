@@ -1781,7 +1781,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing+transition','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg'};
+        model_names = {'n_fing+transition','n_fing+magnitude_avg+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -1872,7 +1872,7 @@ switch (what)
         % else
         %     noise_ceil = mean(corr_struct.RT);
         % end
-        noise_ceil = 1;
+        noise_ceil = 0.8685;
 
         for i = 1:length(model_names)
             r = C.r(strcmp(C.model,model_names{i}));
