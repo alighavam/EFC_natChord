@@ -88,7 +88,7 @@ switch (what)
                                                          tmp_data.baselineTopThresh(j), tmp_data.RT(j), ...
                                                          tmp_data.fGain1(j), tmp_data.fGain2(j), tmp_data.fGain3(j), ...
                                                          tmp_data.fGain4(j), tmp_data.fGain5(j));
-                    % calculate and stor rt and mt:
+                    % calculate and store rt and mt:
                     [rt_tmp(j),mt_tmp(j),first_finger_tmp(j)] = calculate_rt_mt(tmp_mov{j}, tmp_data.chordID(j), ...
                                                                 tmp_data.baselineTopThresh(j), tmp_data.RT(j), ...
                                                                 tmp_data.fGain1(j), tmp_data.fGain2(j), tmp_data.fGain3(j), ...
@@ -133,12 +133,13 @@ switch (what)
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         subjects = unique(data.sn);
         sess = data.sess;
+        unique_sess = unique(sess);
         chords = unique(data.chordID);
         % sorting chords in an arbitrary way:
         chords_sorted = [19999, 91999, 99199, 99919, 99991, 29999, 92999, 99299, 99929, 99992];
         [ind,~] = find(chords == chords_sorted);
         chords = [chords_sorted'; chords(setdiff(1:length(chords),ind))];
-
+        
         n = get_num_active_fingers(chords);
 
         % container to hold the dataframe:
@@ -253,8 +254,24 @@ switch (what)
                 ANA.RT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.RT);
             end
         end
-
+        
         dsave(fullfile(project_path,'analysis','natChord_chord.tsv'),ANA);
+
+    case 'make_analysis_dataframe'
+        % load chord dataframe:
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        
+        % nSphere model:
+        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
+        data.log_slope = C.log_slope;
+        data.log_slope_n = C.log_slope_n;
+
+        % magnitude model:
+        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
+        data.magnitude = out.mag;
+        data.magnitude_n = out.mag_n;
+
+        dsave(fullfile(project_path,'analysis','natChord_analysis.tsv'),data);
 
     case 'make_natural_dist'
         subject_name = 'subj01';
@@ -335,7 +352,7 @@ switch (what)
         % handling input arguments:
         subject_name = 'subj01';    % subject ID
         plot_option = 1;            % flag to plot the avg chord patterns.
-        normalize_channels = 0;     % flag to whether normalize the channels by their norms or not.
+        normalize_channels = 1;     % flag to whether normalize the channels by their norms or not.
         sess = 1;
         vararginoptions(varargin,{'subject_name','plot_option','normalize_channels','sess'});
         
@@ -868,6 +885,7 @@ switch (what)
         % partial correlation between MD and magnitude considering
         % number of fingers effect:
         C  = [];
+        mag_n = [];
         for sn = 1:length(subj)
             for i = 1:length(sess)
                 X = out.mag(out.sess==i & out.sn==subj(sn));
@@ -880,10 +898,14 @@ switch (what)
                 tmp.rho = rho;
                 tmp.p = p;
                 tmp.res_mag = {resX};
+                mag_n = [mag_n ; resX];
                 tmp.res_measure = {resY};
                 C = addstruct(C,tmp,'row',1);
             end
         end
+        
+        % add mag_n and MD_n to out:
+        out.mag_n = mag_n;
 
         if (plot_option)
             for sn = 1:length(subj)
@@ -1528,12 +1550,12 @@ switch (what)
     case 'model_testing_all'
         % handling input arguments:
         measure = 'MD_efc';
-        model_names = {'n_fing+transition','n_fing+nSphere','additive+2fing_adj','magnitude','n_fing+magnitude','n_fing+nSphere+magnitude'};
+        model_names = {'n_fing','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+transition','n_fing+additive+2fing_adj'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
-        chords = unique(data.chordID);
+        chords = data.chordID(1:sum(data.sn==1 & data.sess==1));
         subj = unique(data.sn);
         sess = unique(data.sess);
         
@@ -1554,10 +1576,10 @@ switch (what)
         
         % modelling the difficulty for all chords.
         C = [];
-        % loop on subjects and model testing:
+        % loop on subjects and model testing witihin subjects:
         for sn = 1:length(subj)
-            % values of 'not-out' subjects, Nx1 vector:
-            y = values_tmp(data.sess==sess(1) & data.sn==subj(sn));
+            % values of subject, Nx1 vector:
+            y = values(:,sn);
             
             % loop on models to be tested:
             for i_mdl = 1:length(model_names)
@@ -1781,15 +1803,15 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing+transition','n_fing+magnitude_avg+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg+chord_pattern'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
         chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
-        chords_natChord = unique(chords_natChord.chordID);
+        chords_natChord = chords_natChord.chordID(chords_natChord.sn==1 & chords_natChord.sess==1);
         data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         data = getrow(data,ismember(data.chordID,chords_natChord));
-        chords = unique(data.chordID);
+        chords = data.chordID(data.sn==1 & data.sess==1);
         subj = unique(data.sn);
         
         % getting the values of measure:
@@ -1807,9 +1829,9 @@ switch (what)
         C = [];
         % loop on subjects and regression with leave-one-out:
         for sn = 1:length(subj)
-            % values of 'not-out' subjects, Nx1 vector:
+            % values of 'in' subjects, Nx1 vector:
             y_train = values(:,setdiff(1:length(subj),sn));
-            y_train = y_train(:);
+            y_train = mean(y_train,2);
 
             % avg of 'out' subject:
             y_test = values(:,sn);
@@ -1817,7 +1839,159 @@ switch (what)
             % loop on models to be tested:
             for i_mdl = 1:length(model_names)
                 % getting design matrix for model:
-                X = make_design_matrix(repmat(chords,length(subj)-1,1),model_names{i_mdl});
+                X = make_design_matrix(chords,model_names{i_mdl});
+                % X = [ones(size(X,1),1) X];
+
+                % check design matrix's Rank:
+                is_full_rank = rank(X) == size(X,2);
+
+                % training the model:
+                % [B,STATS] = linregress(y_train,X,'intercept',0);
+                [B,STATS] = svd_linregress(y_train,X);
+
+                % testing the model:
+                X_test = make_design_matrix(chords,model_names{i_mdl});
+                % X_test = [ones(size(X_test,1),1) X_test];
+                y_pred = X_test * B;
+                r = corr(y_pred,y_test);
+                SSR = sum((y_pred-y_test).^2);
+                SST = sum((y_test-mean(y_test)).^2);
+                r2 = 1 - SSR/SST;
+
+                % storing the results:
+                C_tmp.sn_out = sn;
+                C_tmp.model = model_names(i_mdl);
+                C_tmp.is_full_rank = is_full_rank;
+                C_tmp.B = {B};
+                C_tmp.stats = {STATS};
+                C_tmp.r = r;
+                C_tmp.r2 = r2;
+
+                C = addstruct(C,C_tmp,'row',1);
+            end
+        end
+        
+        % stats between models:
+        stats = [];
+        for i = 1:length(model_names)-1
+            r1 = C.r(strcmp(C.model,model_names{i}));
+            for j = i+1:length(model_names)
+                r2 = C.r(strcmp(C.model,model_names{j}));
+                % paired t-test, one-tail r2>r1:
+                [t,p] = ttest(r2,r1,1,'paired');
+                tmp.models = {model_names{i},model_names{j}};
+                tmp.t = t;
+                tmp.p = p;
+                stats = addstruct(stats,tmp,'row',1);
+            end
+        end
+
+
+        % getting noise ceiling:
+        % [~,corr_struct] = efc1_analyze('selected_chords_reliability','blocks',[(sess(1)-1)*12+1 sess(2)*12],'chords',chords,'plot_option',0);
+        % if (strcmp(measure,'MD'))
+        %     noise_ceil = mean(corr_struct.MD);
+        % elseif (strcmp(measure,'MT'))
+        %     noise_ceil = mean(corr_struct.MT);
+        % else
+        %     noise_ceil = mean(corr_struct.RT);
+        % end
+        noise_ceil = 0.8685;
+        % noise_ceil = 0.2803;
+
+        for i = 1:length(model_names)
+            r = C.r(strcmp(C.model,model_names{i}));
+            fprintf('ttest: model %s different from noise ceiling:\n',model_names{i})
+            ttest(r-noise_ceil,[],2,'onesample')
+        end
+
+        % PLOT - regression results:
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 3.5 3],'Box','off');
+        for j = 1:length(model_names)
+            % getting cross validated r:
+            r = C.r(strcmp(C.model,model_names{j}));
+            
+            r_avg(j) = mean(r);
+            r_sem(j) = std(r)/sqrt(length(r));
+        end
+
+        % r_avg = r_avg/noise_ceil;
+        % noise_ceil = noise_ceil/noise_ceil;
+
+        drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
+        plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
+        errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
+        scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
+        box off
+        h = gca;
+        % h.YTick = 0:0.25:1;
+        h.XTick = 1:length(model_names);
+        h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
+        h.XAxis.FontSize = my_font.tick_label;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel('r','FontSize',my_font.ylabel)
+        % ylim([0, .85])
+        % h.YTick = 0:0.4:0.8;
+        ylim([0.6 1])
+        h.YTick = 0.6:0.2:1;
+        % h.YTickLabel = {'0','1'};
+        xlim([0.5,length(model_names)+0.5])
+        fontname("Arial")
+
+        varargout{1} = C;
+        varargout{2} = stats;
+
+    case 'model_testing_learning_slope_efc1'
+        % handling input arguments:
+        measure = 'MD';
+        model_names = {'n_fing','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+transition','n_fing+additive+2fing_adj'};
+        vararginoptions(varargin,{'chords','measure','model_names'})
+        
+        % loading data:
+        chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords_natChord = chords_natChord.chordID(chords_natChord.sn==2);
+        data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
+        data = getrow(data,ismember(data.chordID,chords_natChord));
+        chords = data.chordID(data.sn==1 & data.sess==1);
+        subj = unique(data.sn);
+        
+        % getting the values of measure:
+        values_tmp = eval(['data.' measure]);
+        
+        % getting the average of sessions for every subj:
+        values = zeros(length(chords),length(subj));
+        for i = 1:length(subj)
+            tmp = [values_tmp(data.sess==1 & data.sn==subj(i)), values_tmp(data.sess==2 & data.sn==subj(i)), ...
+                   values_tmp(data.sess==3 & data.sn==subj(i)), values_tmp(data.sess==4 & data.sn==subj(i))];
+
+            for j = 1:size(tmp,1)
+                tmp_x = (1:4)';
+                tmp_y = tmp(j,:)';
+                nan_idx = isnan(tmp_y);
+                tmp_y(nan_idx) = [];
+                tmp_x(nan_idx) = [];
+                tmp_slope = linslope([tmp_x , tmp_y]);
+
+                values(j,i) = tmp_slope;
+            end
+        end
+
+        % modelling the learning slope for all chords.
+        C = [];
+        % loop on subjects and regression with leave-one-out:
+        for sn = 1:length(subj)
+            % values of 'in' subjects, Nx1 vector:
+            y_train = values(:,setdiff(1:length(subj),sn));
+            y_train = mean(y_train,2);
+
+            % avg of 'out' subject:
+            y_test = values(:,sn);
+
+            % loop on models to be tested:
+            for i_mdl = 1:length(model_names)
+                % getting design matrix for model:
+                X = make_design_matrix(chords,model_names{i_mdl});
 
                 % check design matrix's Rank:
                 is_full_rank = rank(X) == size(X,2);
@@ -1852,6 +2026,7 @@ switch (what)
         for i = 1:length(model_names)-1
             r1 = C.r(strcmp(C.model,model_names{i}));
             for j = i+1:length(model_names)
+                tmp = [];
                 r2 = C.r(strcmp(C.model,model_names{j}));
                 % paired t-test, one-tail r2>r1:
                 [t,p] = ttest(r2,r1,1,'paired');
@@ -1902,7 +2077,7 @@ switch (what)
         h.XAxis.FontSize = my_font.tick_label;
         h.YAxis.FontSize = my_font.tick_label;
         ylabel('r','FontSize',my_font.ylabel)
-        ylim([0, 1.05])
+        % ylim([0, 0.2])
         xlim([0.5,length(model_names)+0.5])
         fontname("Arial")
 
