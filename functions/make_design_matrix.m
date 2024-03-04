@@ -1,7 +1,14 @@
 function X = make_design_matrix(chords,model_name,varargin)
+% setting paths:
+usr_path = userpath;
+usr_path = usr_path(1:end-17);
+project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+
 sn = 1; % subjects to get certain methods for
 sess = 1;
 vararginoptions(varargin,{'sn','sess'})
+
+
 
 switch model_name
     case 'n_fing'
@@ -82,30 +89,74 @@ switch model_name
         end
 
     case 'magnitude'
-        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
-        X = out.mag(out.sn==sn & out.sess==sess);
+        out = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+            
+        magnitude = out.magnitude(out.sn==sn & out.sess==sess);
+        out_chordID = out.chordID(out.sn==sn & out.sess==sess);
+        
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) = magnitude(out_chordID==chords(i));
+        end
 
     case 'nSphere'
-        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
-        X = C.log_slope(C.sn==sn & C.sess==sess);
-    
+        C = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        log_slope = C.log_slope(C.sn==sn & C.sess==sess);
+        C_chordID = C.chordID(C.sn==sn & C.sess==sess);
+        
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) = log_slope(C_chordID==chords(i));
+        end
+
     case 'nSphere_avg'
-        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
+        C = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
         sn_unique = unique(C.sn);
+        
+        % calculate group avg:
         avg_log_slope = 0;
         for i = 1:length(sn_unique)
             avg_log_slope = avg_log_slope + C.log_slope(C.sn==sn_unique(i) & C.sess==sess)/length(sn_unique);
         end
-        X = repmat(avg_log_slope,length(chords)/length(avg_log_slope),1);
+        C_chordID = C.chordID(C.sn==1 & C.sess==1);
+        
+        % making the design matrix:
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) =  avg_log_slope(C_chordID==chords(i));
+        end
     
     case 'magnitude_avg'
-        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
+        out = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
         sn_unique = unique(out.sn);
+
+        % calculate group avg:
         avg_magnitude = 0;
         for i = 1:length(sn_unique)
-            avg_magnitude = avg_magnitude + out.mag(out.sn==sn_unique(i) & out.sess==sess)/length(sn_unique);
+            avg_magnitude = avg_magnitude + out.magnitude(out.sn==sn_unique(i) & out.sess==sess)/length(sn_unique);
         end
-        X = repmat(avg_magnitude,length(chords)/length(avg_magnitude),1);
+        out_chordID = out.chordID(out.sn==1 & out.sess==sess);
+
+        % making the design matrix:
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) =  avg_magnitude(out_chordID==chords(i));
+        end
+
+    case 'chord_pattern'
+        % calculate group avg:
+        avg_pattern = 0;
+        for i = 1:4
+            [pattern,chordID] = natChord_analyze('avg_chord_patterns','subject_name',['subj0' num2str(i)],'plot_option',0);
+            avg_pattern = avg_pattern + pattern/4;
+        end
+        
+        % making the design matrix:
+        X = zeros(length(chords),10);
+        for i = 1:length(chords)
+            X(i,:) =  avg_pattern(chordID==chords(i),:);
+        end
+
 
     otherwise
         names = strsplit(model_name,'+');
