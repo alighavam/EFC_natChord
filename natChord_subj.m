@@ -5,10 +5,10 @@ smoothing_win_length = 25;  % force smoothing window size in ms
 fs_force = 500;             % force signals sampling rate in Hz
 fs_emg = 2148.1481;         % EMG sampling rate in Hz  
 Fstop_lpf = 40;
-natural_window_size = 100;      % window size to sample natural EMG
+natural_window_size = 20;      % window size to sample natural EMG
 sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
 natural_window_type = 'Rect';   % sampling window type for natural EMGs.
-wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
+wn_spacing = 10;                 % sampling spacing for the 'whole_sampled' option.
 vararginoptions(varargin,{'smoothing_win_length','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
