@@ -34,12 +34,12 @@ switch (what)
         % handling input arguments:
         subject_name = 'subj01';
         smoothing_win_length = 30;          % smoothing for force signals
-        lpf = 0;                            % wether to do lowpass filtering on the EMG data.
+        Fstop_lpf = 40;
         sampling_option = 'whole_sampled';  % sampling option for the natural EMG data
         natural_window_size = 20;          % wn size for natural EMGs sampling in ms.
         wn_spacing = 10;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
         natural_window_type = 'Rect';       % window shape for the natural EMG sampling. 'Rect' or 'Gaussian'
-        vararginoptions(varargin,{'subject_name','smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
+        vararginoptions(varargin,{'subject_name','smoothing_win_length','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
         
         % if a cell containing multiple subjects was given:
