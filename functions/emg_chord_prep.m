@@ -1,4 +1,4 @@
-function [emg,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs, D_block, mov, subject_info, hd, hd_lpf)
+function [emg,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs, D_block, mov, subject_info, sos, g)
 
 % The first 3 rows of the loaded emg files is nan:
 emg_data(1:3,:) = [];
@@ -102,12 +102,11 @@ emg_data_selected(unique(row_nan),:) = [];
 % filtering the EMG signals:
 fprintf("Filtering the raw EMG signals:\n\n")
 for j = 1:size(emg_data_selected,2)
-    fprintf("Bandpass Filtering channel %d/%d...\n",j,size(emg_data_selected,2))
-    emg_data_selected(:,j) = abs(filtfilt(hd.Numerator, 1, emg_data_selected(:,j)));
-    if (~isempty(hd_lpf))
-        fprintf("Lowpass Filtering rectified channel %d/%d...\n",j,size(emg_data_selected,2))
-        emg_data_selected(:,j) = filtfilt(hd_lpf.Numerator, 1, emg_data_selected(:,j));
-    end
+    % de-mean rectify EMGs:
+    emg_data_selected(:,j) = abs(emg_data_selected(:,j) - mean(emg_data_selected(:,j)));
+    
+    fprintf("Lowpass Filtering channel %d/%d...\n",j,size(emg_data_selected,2))
+    emg_data_selected(:,j) = filtfilt(sos, g, emg_data_selected(:,j));
 end
 
 emg = cell(length(riseIdx),1);
@@ -171,7 +170,7 @@ for j = 1:length(riseIdx)
         idx_hold_onset = round(hold_onset_time * fs);
         
         % averaging EMG during hold time:
-        hold_avg_tmp = mean(emg_trial(idx_hold_onset:end,:), 1);
+        hold_avg_tmp = sqrt(mean(emg_trial(idx_hold_onset:end,:).^2, 1));
     else
         % if trial is incorrect, we don't have a hold time, hence:
         hold_avg_tmp = -1;
