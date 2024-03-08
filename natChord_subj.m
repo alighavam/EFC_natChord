@@ -4,13 +4,11 @@ function ANA = natChord_subj(subjName,varargin)
 smoothing_win_length = 25;  % force smoothing window size in ms
 fs_force = 500;             % force signals sampling rate in Hz
 fs_emg = 2148.1481;         % EMG sampling rate in Hz  
-lpf = 0;                    % flag to do lowpass filtering;
-Fpass_lpf = 20;
-Fstop_lpf = 30;
-natural_window_size = 200;      % window size to sample natural EMG
+Fstop_lpf = 40;
+natural_window_size = 100;      % window size to sample natural EMG
 sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
 natural_window_type = 'Rect';   % sampling window type for natural EMGs.
-wn_spacing = 2;                 % sampling spacing for the 'whole_sampled' option.
+wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
 vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
@@ -41,12 +39,11 @@ MOV_struct = cell(length(D.BN),1);
 EMG_struct = cell(length(D.BN),1);
 
 % EMG filters:
-hd = emg_filter_designer(fs_emg, 'filter_type', 'bandpass');   % creates my default bpf (20,500)Hz
-if (lpf == 1)
-    hd_lpf = emg_filter_designer(fs_emg, 'filter_type', 'lowpass','Fpass_lpf',Fpass_lpf,'Fstop_lpf',Fstop_lpf);    % creates lpf
-else
-    hd_lpf = [];
-end
+% Define filter parameters
+% Design the Butterworth filter
+[b, a] = butter(6, Fstop_lpf/(fs_emg/2), 'low'); % 6th order Butterworth filter
+% Convert to second-order sections (SOS) format
+[sos, g] = tf2sos(b, a);
 
 oldBlock = -1;
 % loop on trials:
