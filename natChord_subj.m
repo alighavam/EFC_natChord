@@ -9,7 +9,7 @@ natural_window_size = 100;      % window size to sample natural EMG
 sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
 natural_window_type = 'Rect';   % sampling window type for natural EMGs.
 wn_spacing = 4;                 % sampling spacing for the 'whole_sampled' option.
-vararginoptions(varargin,{'smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
+vararginoptions(varargin,{'smoothing_win_length','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
 % setting paths:
@@ -102,7 +102,7 @@ fprintf("Processing natural EMG data...\n\n")
 % give session number to the function to know how to create the natural 
 % dist:
 sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
-make_natural_emg(subjName,sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+make_natural_emg(subjName,sess_cell,fs_emg,sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
 
 
 
