@@ -33,11 +33,11 @@ switch (what)
     case 'subject_routine'
         % handling input arguments:
         subject_name = 'subj01';
-        smoothing_win_length = 30;
+        smoothing_win_length = 30;          % smoothing for force signals
         lpf = 0;                            % wether to do lowpass filtering on the EMG data.
         sampling_option = 'whole_sampled';  % sampling option for the natural EMG data
-        natural_window_size = 100;          % wn size for natural EMGs sampling in ms.
-        wn_spacing = 4;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
+        natural_window_size = 20;          % wn size for natural EMGs sampling in ms.
+        wn_spacing = 10;                     % the spacing between windows for the whole_samlped sampling option (i.e. how many windows to skip)
         natural_window_type = 'Rect';       % window shape for the natural EMG sampling. 'Rect' or 'Gaussian'
         vararginoptions(varargin,{'subject_name','smoothing_win_length','lpf','Fpass_lpf','Fstop_lpf', ...
                           'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
@@ -240,7 +240,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4]'];
+        subject_mapping = [subjects , [1,5,2,4,7]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -1184,49 +1184,68 @@ switch (what)
         varargout{2} = C;
         
 
-    case 'chord_distance_matrix'
+    case 'chord_distance_RDM'
         subject_name = 'subj01';
+        num_fingers = [];
         normalize_channels = 1;
-        vararginoptions(varargin,{'subject_name','normalize_channels'})
+        vararginoptions(varargin,{'subject_name','normalize_channels','num_fingers'})
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-        chords = unique(data.chordID);
         sess = unique(data.sess);
-        
-        % getting avg mean deviation of chords:
-        chords_mean_dev = [];
-        for j = 1:length(sess)
-            for i = 1:length(chords)
-                chords_mean_dev(i,j) = data.MD_efc(data.chordID==chords(i) & data.sess==sess & data.sn==str2double(subject_name(end-1:end)));
-            end
-        end
-        
-        % emg locations:
-        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
-        
+        sn_unique = unique(data.sn);
+
         % distance between muscle patterns:
-        for i = 1:length(sess)
-            % calculating avg chord patterns:
-            [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_name,'plot_option',0,'normalize_channels',normalize_channels);
-
-            d = squareform(pdist(pattern));
-
-            figure;
-            imagesc(d)
-            colorbar
-            
-            % plot settings:
-            ax = gca;
-            
-            set(ax,'YTick',(1:size(chords,1)))
-            set(ax,'YTickLabel',chords)
-            
-            set(ax,'XTick', (1:size(chords,1)))
-            set(ax,'XTickLabel',chords)
-            
-            set(gca,'YDir','reverse')
-            title(sprintf('emg pattern distance , sess %d',i))
+        avg_pattern = 0;
+        avg_d = 0;
+        for sn = 1:length(sn_unique)
+            avg_pattern_sess = 0;
+            avg_d_sess = 0;
+            for i = 1:length(sess)
+                % calculating avg chord patterns:
+                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'plot_option',0,'normalize_channels',normalize_channels);
+                % selected patterns of input chords:
+                if ~isempty(num_fingers)
+                    n = get_num_active_fingers(chords);
+                    pattern = pattern(n==num_fingers,:);
+                    chords = chords(n==num_fingers);
+                    
+                    % bring flexions first:
+                    if (num_fingers==1)
+                        idx = [(6:10)';(1:5)'];
+                        chords = chords(idx);
+                        pattern = pattern(idx,:);
+                    end
+                end
+                avg_pattern_sess = avg_pattern_sess + pattern/length(sess);
+                
+                % get Euclidean distance of patterns
+                d = squareform(pdist(pattern));
+                avg_d_sess = avg_d_sess + d/length(sess);
+            end
+            avg_pattern = avg_pattern + avg_pattern_sess/length(sn_unique);
+            avg_d = avg_d + avg_d_sess/length(sn_unique);
         end
+
+        figure;
+        imagesc(avg_d); hold on;
+        % clim([0, 1.6])
+        axis square
+        colormap('hot')
+        colorbar
+        drawline(5.5,'dir','horz','linewidth',4)
+        drawline(5.5,'dir','vert','linewidth',4)
+        
+        % plot settings:
+        ax = gca;
+        
+        set(ax,'YTick',(1:size(chords,1)))
+        set(ax,'YTickLabel',chords)
+        
+        set(ax,'XTick', (1:size(chords,1)))
+        set(ax,'XTickLabel',chords)
+        
+        set(gca,'YDir','reverse')
+        title(sprintf('emg pattern distance , sess %d',i))
         
 
     case 'natural_distance_RDM'
@@ -1275,6 +1294,9 @@ switch (what)
         % imagesc(d_emg{2})
         % colormap('hot')
         % colorbar
+
+    
+
 
     case 'decoding'
         subject_name = 'subj01';
@@ -1550,7 +1572,7 @@ switch (what)
     case 'model_testing_all'
         % handling input arguments:
         measure = 'MD_efc';
-        model_names = {'n_fing','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+transition','n_fing+additive+2fing_adj'};
+        model_names = {'n_fing','n_fing+magnitude','n_fing+magnitude+nSphere','n_fing+additive+2fing_adj','n_fing+additive+2fing_adj+magnitude+nSphere'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -1726,9 +1748,9 @@ switch (what)
         end
         box off
         h = gca;
-        h.YTick = 100:150:600; % RT
+        % h.YTick = 100:150:600; % RT
         % h.YTick = 0:1000:3000; % MT
-        % h.YTick = 0.5:1:2.5; % MD
+        h.YTick = 0.5:1:2.5; % MD
         h.XTick = 5*(1:length(visits)) - 2;
         xlabel('visit','FontSize',my_font.xlabel)
         h.XTickLabel = {'1','2'};
@@ -1736,8 +1758,8 @@ switch (what)
         h.YAxis.FontSize = my_font.tick_label;
         ylabel(measure,'FontSize',my_font.ylabel)
         % ylabel([measure ' [ms]'],'FontSize',my_font.ylabel)
-        % ylim([0.3, 2.8]) % MD
-        ylim([0, 650]) % RT
+        ylim([0.3, 2.8]) % MD
+        % ylim([0, 650]) % RT
         % ylim([0, 3200]) % MT
         xlim([0,11])
         % title('Repetition Effect','FontSize',my_font.title)
@@ -1803,7 +1825,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg+chord_pattern'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2083,6 +2105,78 @@ switch (what)
 
         varargout{1} = C;
         varargout{2} = stats;
+
+    case 'chord_natural_EMG_patterns'
+        sess = 1;
+
+        % load data:
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords = data.chordID(data.sn==1 & data.sess==sess);
+
+        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
+
+        % get group avg chord patterns:
+        patterns = make_design_matrix(chords,'chord_pattern','sess',1);
+        rows = [1,6,10,11,23,25,26:4:68];
+        patterns = patterns(rows,:);
+        
+        % loading natural EMG dists:
+        subject_name = 'subj01';
+        emg_dist = load(fullfile(project_path,'analysis','natChord_subj01_emg_natural_whole_sampled.mat'));
+        emg_dist = emg_dist.emg_natural_dist;
+
+        % scaling factors:
+        scales = get_emg_scales(str2double(subject_name(end-1:end)),sess);
+
+        % normalizing the natural EMGs:
+        for i = 1:length(emg_dist.dist)
+            emg_dist.dist{i} = emg_dist.dist{i} ./ scales;
+        end
+
+        
+        % PLOT - Chords:
+        figure;
+        % plotting the chord EMG patterns:
+        h = pcolor([[patterns, zeros(size(patterns,1),1)] ; zeros(1,size(patterns,2)+1)]);
+        colorbar
+        % plot settings:
+        set(h,'EdgeColor','none')
+        % plot settings:
+        ax = gca;
+        set(ax,'YTick',(1:size(patterns,1))+0.5)
+        set(ax,'YTickLabel',chords)
+        set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
+        set(ax,'XTickLabel',emg_locs_names)
+        set(gca,'YDir','reverse')
+        title(['sess ' sess])
+        
+        
+        % PLOT - Natural:
+        i = 1;
+        n = 50;
+        matrix = emg_dist.dist{i}(1:2800,:);
+        % Reshape the matrix
+        [~, numCols] = size(matrix);
+        
+        reshaped_matrix = reshape(matrix, n, [], numCols);
+        
+        % Take the mean along the first dimension
+        averaged_matrix = mean(reshaped_matrix, 1);
+        averaged_matrix = squeeze(averaged_matrix); % Remove singleton dimensions
+
+        % plotting the natural EMG patterns:
+        figure;
+        h  = pcolor([[averaged_matrix, zeros(size(averaged_matrix,1),1)] ; zeros(1,size(averaged_matrix,2)+1)]);
+        colorbar
+        % plot settings:
+        set(h,'EdgeColor','none')
+        ax = gca;
+        set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
+        set(ax,'XTickLabel',emg_locs_names)
+        set(gca,'YDir','reverse')
+        title(['sess ' sess])
+        clim([0,1])
+
 
     otherwise
         error('The analysis you entered does not exist!')
