@@ -143,7 +143,7 @@ iti = 200           # inter-trial interval
 column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'feedbackTime', 'iti']
 
 # setting the subject number !!!-------- Don't forget to change --------!!!:
-subNum = 4
+subNum = 10
 fileNameBase_sf = 'natChord_subj' + f"{subNum:02}" + '_run'
 filenameBase_chord = 'natChord_subj' + f"{subNum:02}" + '_run'
 
