@@ -147,7 +147,7 @@ switch model_name
         % calculate group avg:
         avg_pattern = 0;
         for i = 1:4
-            [pattern,chordID] = natChord_analyze('avg_chord_patterns','subject_name',['subj0' num2str(i)],'plot_option',0);
+            [pattern,chordID] = natChord_analyze('avg_chord_patterns','subject_name',['subj0' num2str(i)],'plot_option',0,'sess',sess);
             avg_pattern = avg_pattern + pattern/4;
         end
         
