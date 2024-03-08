@@ -1,4 +1,4 @@
-function dist = emg_natural_prep(subject_info,emg_data, sess, fs, hd, hd_lpf, wn_type, wn_size, sampling_option, wn_spacing)
+function dist = emg_natural_prep(subject_info,emg_data, sess, fs, sos, g, wn_type, wn_size, sampling_option, wn_spacing)
 % Description:
 %   wn_size is in ms. 
 %   wn_type is 'Gaussian' or 'Rect'
@@ -117,12 +117,11 @@ emg_data_selected(unique(row_nan),:) = [];
 % filtering the EMG signals:
 fprintf("Filtering the raw natural EMG signals:\n\n")
 for j = 1:size(emg_data_selected,2)
-    fprintf("Bandpass Filtering channel %d/%d...\n",j,size(emg_data_selected,2))
-    emg_data_selected(:,j) = abs(filtfilt(hd.Numerator, 1, emg_data_selected(:,j)));
-    if (~isempty(hd_lpf))
-        fprintf("Lowpass Filtering rectified channel %d/%d...\n",j,size(emg_data_selected,2))
-        emg_data_selected(:,j) = filtfilt(hd_lpf.Numerator, 1, emg_data_selected(:,j));
-    end
+    % de-mean rectify EMGs:
+    emg_data_selected(:,j) = abs(emg_data_selected(:,j) - mean(emg_data_selected(:,j)));
+    
+    fprintf("Lowpass Filtering channel %d/%d...\n",j,size(emg_data_selected,2))
+    emg_data_selected(:,j) = filtfilt(sos, g, emg_data_selected(:,j));
 end
 
 % converting window size from ms to index:
@@ -153,7 +152,8 @@ switch sampling_option
         for i = 1:size(intervals,1)
             % windowing the interval:
             tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
-            sampled_emg(i,:) = sum(tmp,1)./sum(wn,1);
+            % RMS of window:
+            sampled_emg(i,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
         end
         dist.partition(1,1) = 1;
         dist.dist{1,1} = sampled_emg;
@@ -174,9 +174,9 @@ switch sampling_option
             for j = 1:size(intervals_tmp,1)
                 % windowing the interval:
                 tmp = emg_data_selected(intervals_tmp(j,1):intervals_tmp(j,2),:) .* wn;
-                sampled_emg(j,:) = sum(tmp,1)./sum(wn,1);
+                sampled_emg(j,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
             end
-
+            
             dist.sess(i,1) = str2double(sess(end-1:end));
             dist.partition(i,1) = i;
             dist.dist{i,1} = sampled_emg;
@@ -198,7 +198,7 @@ switch sampling_option
             for j = 1:size(intervals_tmp,1)
                 % windowing the interval:
                 tmp = emg_data_selected(intervals_tmp(j,1):intervals_tmp(j,2),:) .* wn;
-                sampled_emg(j,:) = sum(tmp,1)./sum(wn,1);
+                sampled_emg(j,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
             end
 
             % thresholding based on norm of channels after scaling:

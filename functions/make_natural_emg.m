@@ -1,4 +1,4 @@
-function sampled_emg = make_natural_emg(subjName,sess,fs_emg,hd,hd_lpf, wn_type, wn_size, sampling_option, wn_spacing)
+function sampled_emg = make_natural_emg(subjName, sess, fs_emg, sos, g, wn_type, wn_size, sampling_option, wn_spacing)
 
 % setting paths:
 usr_path = userpath;
@@ -24,7 +24,7 @@ for i = 1:length(sess)
     emg_data = readtable(fullfile(project_path,'data', subjName, ['emg_natural' num2str(i,'%02d') '.csv']));
 
     % call emg_natural_prep function:
-    sampled_emg = emg_natural_prep(getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), emg_data, sess{i}, fs_emg, hd, hd_lpf, ...
+    sampled_emg = emg_natural_prep(getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), emg_data, sess{i}, fs_emg, sos, g, ...
         wn_type, wn_size, sampling_option, wn_spacing);
     
     emg_natural_dist = addstruct(emg_natural_dist,sampled_emg,'row','force');
