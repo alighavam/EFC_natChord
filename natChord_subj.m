@@ -61,7 +61,7 @@ for i = 1:length(D.BN)
         % call emg_chord_prep function:
         [emg_block,baseline_emg,hold_avg_EMG] = emg_chord_prep(emg_data, fs_emg, getrow(D,D.BN == D.BN(i)), mov, ...
                                                 getrow(subj_info,find(strcmp(subj_info.participant_id,subjName))), ...
-                                                hd,hd_lpf);
+                                                sos,g);
         
         oldBlock = D.BN(i);
     end
