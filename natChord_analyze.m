@@ -277,13 +277,12 @@ switch (what)
         subject_name = 'subj01';
         fs_emg = 2148.1481;         % EMG sampling rate in Hz  
         lpf = 0;                    % flag to do lowpass filtering;
-        Fpass_lpf = 20;
-        Fstop_lpf = 30;
+        Fstop_lpf = 40;
         natural_window_size = 20;      % window size to sample natural EMG
-        sampling_option = 'whole_sampled';      % sampling option to select windows from natural EMGs.
+        sampling_option = 'whole_thresholded';      % sampling option to select windows from natural EMGs.
         natural_window_type = 'Rect';   % sampling window type for natural EMGs.
         wn_spacing = 10;                 % sampling spacing for the 'whole_sampled' option.
-        vararginoptions(varargin,{'subject_name','lpf','Fpass_lpf','Fstop_lpf', ...
+        vararginoptions(varargin,{'subject_name','Fstop_lpf', ...
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
         data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
@@ -291,26 +290,24 @@ switch (what)
         sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
         
         % EMG filters:
-        hd = emg_filter_designer(fs_emg, 'filter_type', 'bandpass');   % creates my default bpf (20,500)Hz
-        if (lpf == 1)
-            hd_lpf = emg_filter_designer(fs_emg, 'filter_type', 'lowpass','Fpass_lpf',Fpass_lpf,'Fstop_lpf',Fstop_lpf);    % creates lpf
-        else
-            hd_lpf = [];
-        end
+        % Define filter parameters
+        % Design the Butterworth filter
+        [b, a] = butter(6, Fstop_lpf/(fs_emg/2), 'low'); % 6th order Butterworth filter
+        % Convert to second-order sections (SOS) format
+        [sos, g] = tf2sos(b, a);
                 
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
             for i = 1:length(subject_name)        
                 % Preprocessing and dealing with the natural EMGs:
                 fprintf("Processing natural EMG data...\n\n")
-                make_natural_emg(subject_name{i},sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+                make_natural_emg(subject_name{i}, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
             end
         % if a single subject as a char was given:
         else
-            
             % Preprocessing and dealing with the natural EMGs:
             fprintf("Processing natural EMG data...\n\n")
-            make_natural_emg(subject_name,sess_cell,fs_emg,hd,hd_lpf,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+            make_natural_emg(subjName, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
         end
 
     case 'natural_emg_autocorr'
