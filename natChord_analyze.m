@@ -1252,7 +1252,7 @@ switch (what)
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         sn_unique = unique(data.sn);
-
+        
         % distance between muscle patterns:
         group_distance = 0;
         % loop on subjects:
