@@ -1224,7 +1224,7 @@ switch (what)
         end
 
         figure;
-        imagesc(avg_d); hold on;
+        imagesc(avg_d.^2); hold on;
         % clim([0, 1.6])
         axis square
         colormap('hot')
@@ -1294,9 +1294,16 @@ switch (what)
         
         % PLOT:
         figure;
-        imagesc(group_distance)
+        imagesc(group_distance.^2); hold on;
+        axis square
         colormap('hot')
         colorbar
+        drawline(5.5,'dir','horz','linewidth',4)
+        drawline(5.5,'dir','vert','linewidth',4)
+        % clim([0 80])
+        
+        % plot settings:
+        
         % figure;
         % imagesc(d_emg{2})
         % colormap('hot')
