@@ -1248,17 +1248,13 @@ switch (what)
     case 'natural_distance_RDM'
         % handling input arguments:
         sampling_option = 'whole_sampled';
-        subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name','sampling_option'});
-
-        % distance between muscle patterns:
-        group_pattern = 0;
-        group_distance = 0;
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-        sess = unique(data.sess);
         sn_unique = unique(data.sn);
 
+        % distance between muscle patterns:
+        group_distance = 0;
         % loop on subjects:
         for sn = 1:length(sn_unique)
             % set natural EMG file name:
@@ -1281,23 +1277,22 @@ switch (what)
             end
             
             % Euclidean distance of EMG channels in natural:
-            d_emg = [];
+            d_emg_sn = 0;
             for i = 1:length(sess)
                 tmp = zeros(size(emg_dist.dist{1},2),size(emg_dist.dist{1},2));
                 for j = 1:length(partititons)
                     row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
                     tmp = tmp + squareform(pdist(emg_dist.dist{row}'))/length(partititons);
                 end
-                d_tmp.sess = sess(i);
-                d_tmp.distance = {tmp};
-                d_emg = addstruct(d_emg,d_tmp,'row',1);
+                d_emg_sn = d_emg_sn + tmp/length(sess);
             end
-        end
 
+            group_distance = group_distance + d_emg_sn/length(sn_unique);
+        end
         
-        
+        % PLOT:
         figure;
-        imagesc(d_emg.distance{1})
+        imagesc(group_distance)
         colormap('hot')
         colorbar
         % figure;
