@@ -1251,37 +1251,50 @@ switch (what)
         subject_name = 'subj01';
         vararginoptions(varargin,{'subject_name','sampling_option'});
 
-        % set natural EMG file name:
-        file_name = fullfile(project_path, 'analysis', ['natChord_' subject_name '_emg_natural_' sampling_option '.mat']);
+        % distance between muscle patterns:
+        group_pattern = 0;
+        group_distance = 0;
         
-        % loading natural EMG dists:
-        emg_dist = load(file_name);
-        emg_dist = emg_dist.emg_natural_dist;
-        sess = unique(emg_dist.sess);
-        partititons = unique(emg_dist.partition);
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
+        sess = unique(data.sess);
+        sn_unique = unique(data.sn);
 
-        % normalizing the natural EMGs:
-        for i = 1:length(sess)
-            % scaling factors:
-            scales = get_emg_scales(str2double(subject_name(end-1:end)),sess(i));
-            for j = 1:length(partititons)
-                row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
-                emg_dist.dist{row} = emg_dist.dist{row} ./ scales;
+        % loop on subjects:
+        for sn = 1:length(sn_unique)
+            % set natural EMG file name:
+            file_name = fullfile(project_path, 'analysis', ['natChord_' ['subj' num2str(sn_unique(sn),'%.2d')] '_emg_natural_' sampling_option '.mat']);
+            
+            % loading natural EMG dists:
+            emg_dist = load(file_name);
+            emg_dist = emg_dist.emg_natural_dist;
+            sess = unique(emg_dist.sess);
+            partititons = unique(emg_dist.partition);
+    
+            % normalizing the natural EMGs:
+            for i = 1:length(sess)
+                % scaling factors:
+                scales = get_emg_scales(str2double(subject_name(end-1:end)),sess(i));
+                for j = 1:length(partititons)
+                    row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
+                    emg_dist.dist{row} = emg_dist.dist{row} ./ scales;
+                end
+            end
+            
+            % Euclidean distance of EMG channels in natural:
+            d_emg = [];
+            for i = 1:length(sess)
+                tmp = zeros(size(emg_dist.dist{1},2),size(emg_dist.dist{1},2));
+                for j = 1:length(partititons)
+                    row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
+                    tmp = tmp + squareform(pdist(emg_dist.dist{row}'))/length(partititons);
+                end
+                d_tmp.sess = sess(i);
+                d_tmp.distance = {tmp};
+                d_emg = addstruct(d_emg,d_tmp,'row',1);
             end
         end
+
         
-        % distance of EMG channels:
-        d_emg = [];
-        for i = 1:length(sess)
-            tmp = zeros(size(emg_dist.dist{1},2),size(emg_dist.dist{1},2));
-            for j = 1:length(partititons)
-                row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
-                tmp = tmp + squareform(pdist(emg_dist.dist{row}'))/length(partititons);
-            end
-            d_tmp.sess = sess(i);
-            d_tmp.distance = {tmp};
-            d_emg = addstruct(d_emg,d_tmp,'row',1);
-        end
         
         figure;
         imagesc(d_emg.distance{1})
