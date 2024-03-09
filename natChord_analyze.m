@@ -1294,9 +1294,15 @@ switch (what)
         
         % PLOT:
         figure;
-        imagesc(group_distance)
+        imagesc(group_distance); hold on;
+        axis square
         colormap('hot')
         colorbar
+        drawline(5.5,'dir','horz','linewidth',4)
+        drawline(5.5,'dir','vert','linewidth',4)
+        
+        % plot settings:
+        
         % figure;
         % imagesc(d_emg{2})
         % colormap('hot')
