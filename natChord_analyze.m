@@ -1282,7 +1282,9 @@ switch (what)
                 tmp = zeros(size(emg_dist.dist{1},2),size(emg_dist.dist{1},2));
                 for j = 1:length(partititons)
                     row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
-                    tmp = tmp + squareform(pdist(emg_dist.dist{row}'))/length(partititons);
+                    swapped_flex_extend = emg_dist.dist{row};
+                    swapped_flex_extend = swapped_flex_extend(:,[6:10,1:5]);
+                    tmp = tmp + squareform(pdist(swapped_flex_extend'))/length(partititons);
                 end
                 d_emg_sn = d_emg_sn + tmp/length(sess);
             end
