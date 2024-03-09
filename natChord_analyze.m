@@ -1269,7 +1269,7 @@ switch (what)
             % normalizing the natural EMGs:
             for i = 1:length(sess)
                 % scaling factors:
-                scales = get_emg_scales(str2double(subject_name(end-1:end)),sess(i));
+                scales = get_emg_scales(sn_unique(sn),sess(i));
                 for j = 1:length(partititons)
                     row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
                     emg_dist.dist{row} = emg_dist.dist{row} ./ scales;
