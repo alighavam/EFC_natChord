@@ -1182,52 +1182,94 @@ switch (what)
         
 
     case 'chord_distance_RDM'
-        subject_name = 'subj01';
         num_fingers = [];
         normalize_channels = 1;
         vararginoptions(varargin,{'subject_name','normalize_channels','num_fingers'})
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-        sess = unique(data.sess);
         sn_unique = unique(data.sn);
+
+        emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
 
         % distance between muscle patterns:
         avg_pattern = 0;
         avg_d = 0;
+        avg_mahalanobis = 0;
         for sn = 1:length(sn_unique)
             avg_pattern_sess = 0;
             avg_d_sess = 0;
+            avg_mahalanobis_sess = 0;
+
+            sess = unique(data.sess(data.sn==sn_unique(sn)));
             for i = 1:length(sess)
                 % calculating avg chord patterns:
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'plot_option',0,'normalize_channels',normalize_channels);
                 % selected patterns of input chords:
-                if ~isempty(num_fingers)
-                    n = get_num_active_fingers(chords);
-                    pattern = pattern(n==num_fingers,:);
-                    chords = chords(n==num_fingers);
-                    
-                    % bring flexions first:
-                    if (num_fingers==1)
-                        idx = [(6:10)';(1:5)'];
-                        chords = chords(idx);
-                        pattern = pattern(idx,:);
-                    end
-                end
                 avg_pattern_sess = avg_pattern_sess + pattern/length(sess);
-                
+
                 % get Euclidean distance of patterns
                 d = squareform(pdist(pattern));
                 avg_d_sess = avg_d_sess + d/length(sess);
+                % mahalanobis distance of patterns
+                avg_mahalanobis_sess = avg_mahalanobis_sess + d_mahalanobis(pattern)/length(sess);
             end
             avg_pattern = avg_pattern + avg_pattern_sess/length(sn_unique);
             avg_d = avg_d + avg_d_sess/length(sn_unique);
+            avg_mahalanobis = avg_mahalanobis + avg_mahalanobis_sess/length(sn_unique);
+        end
+
+        if ~isempty(num_fingers)
+            n = get_num_active_fingers(chords);
+            avg_pattern = avg_pattern(n==num_fingers,:);
+            chords = chords(n==num_fingers);
+            avg_d = avg_d(n==num_fingers,n==num_fingers);
+            avg_mahalanobis = avg_mahalanobis(n==num_fingers,n==num_fingers);
+            
+            % bring flexions first:
+            if (num_fingers==1)
+                idx = [(6:10)';(1:5)'];
+                chords = chords(idx);
+                avg_pattern = avg_pattern(idx,:);
+
+                tmpA = avg_d(6:10,6:10);
+                tmpB = avg_d(1:5,1:5);
+                tmpC = avg_d(1:5,6:10);
+                tmpD = avg_d(6:10,1:5);
+                avg_d(1:5,1:5) = tmpA;
+                avg_d(1:5,6:10) = tmpD;
+                avg_d(6:10,6:10) = tmpB;
+                avg_d(6:10,1:5) = tmpC;
+
+                tmpA = avg_mahalanobis(6:10,6:10);
+                tmpB = avg_mahalanobis(1:5,1:5);
+                tmpC = avg_mahalanobis(1:5,6:10);
+                tmpD = avg_mahalanobis(6:10,1:5);
+                avg_mahalanobis(1:5,1:5) = tmpA;
+                avg_mahalanobis(1:5,6:10) = tmpD;
+                avg_mahalanobis(6:10,6:10) = tmpB;
+                avg_mahalanobis(6:10,1:5) = tmpC;
+            end
         end
 
         figure;
-        imagesc(avg_d.^2); hold on;
+        imagesc(avg_pattern); hold on;
+        % clim([0, 1.6])
+        colormap('parula')
+        colorbar
+        % plot settings:
+        ax = gca;
+        set(ax,'YTick',(1:size(chords,1)))
+        set(ax,'YTickLabel',chords)
+        set(ax,'XTick', (1:size(emg_locs_names,1)))
+        set(ax,'XTickLabel',emg_locs_names)
+        set(gca,'YDir','reverse')
+        title(sprintf('Avg Muscle Patterns'))
+
+        figure;
+        imagesc(avg_d); hold on;
         % clim([0, 1.6])
         axis square
-        colormap('hot')
+        colormap('magma')
         colorbar
         drawline(5.5,'dir','horz','linewidth',4)
         drawline(5.5,'dir','vert','linewidth',4)
@@ -1242,7 +1284,28 @@ switch (what)
         set(ax,'XTickLabel',chords)
         
         set(gca,'YDir','reverse')
-        title(sprintf('emg pattern distance , sess %d',i))
+        title(sprintf('AVG Euclidean Distance'))
+
+        figure;
+        imagesc(sqrt(abs(avg_mahalanobis))); hold on;
+        % clim([0, 6.5])
+        axis square
+        colormap('magma')
+        colorbar
+        drawline(5.5,'dir','horz','linewidth',4)
+        drawline(5.5,'dir','vert','linewidth',4)
+        
+        % plot settings:
+        ax = gca;
+        
+        set(ax,'YTick',(1:size(chords,1)))
+        set(ax,'YTickLabel',chords)
+        
+        set(ax,'XTick', (1:size(chords,1)))
+        set(ax,'XTickLabel',chords)
+        
+        set(gca,'YDir','reverse')
+        title(sprintf('AVG Mahalanobis Distance'))
         
 
     case 'natural_distance_RDM'
@@ -1255,6 +1318,8 @@ switch (what)
         
         % distance between muscle patterns:
         group_distance = 0;
+        group_corr = 0;
+        group_mahalanobis = 0;
         % loop on subjects:
         for sn = 1:length(sn_unique)
             % set natural EMG file name:
@@ -1278,36 +1343,56 @@ switch (what)
             
             % Euclidean distance of EMG channels in natural:
             d_emg_sn = 0;
+            corr_sn = 0;
+            mahalanobis_sn = 0;
             for i = 1:length(sess)
                 tmp = zeros(size(emg_dist.dist{1},2),size(emg_dist.dist{1},2));
+                tmp_corr = 0;
+                tmp_mahalanobis = 0;
                 for j = 1:length(partititons)
                     row = emg_dist.sess==sess(i) & emg_dist.partition==partititons(j);
                     swapped_flex_extend = emg_dist.dist{row};
                     swapped_flex_extend = swapped_flex_extend(:,[6:10,1:5]);
+                    % Euclidean distance of EMG Channels:
                     tmp = tmp + squareform(pdist(swapped_flex_extend'))/length(partititons);
+
+                    % Correlation of EMG Channels:
+                    tmp_corr = tmp_corr + corr(swapped_flex_extend)/length(partititons);
+
+                    tmp_mahalanobis = tmp_mahalanobis + d_mahalanobis(swapped_flex_extend')/length(partititons);;
                 end
                 d_emg_sn = d_emg_sn + tmp/length(sess);
+                corr_sn = corr_sn + tmp_corr/length(sess);
+                mahalanobis_sn = mahalanobis_sn + tmp_mahalanobis/length(sess);
             end
 
             group_distance = group_distance + d_emg_sn/length(sn_unique);
+            group_corr = group_corr + corr_sn/length(sn_unique);
+            group_mahalanobis = group_mahalanobis + mahalanobis_sn/length(sn_unique);
         end
+
+        size(group_mahalanobis)
         
         % PLOT:
         figure;
-        imagesc(group_distance.^2); hold on;
+        imagesc(1-group_corr); hold on;
         axis square
-        colormap('hot')
+        colormap('magma')
         colorbar
         drawline(5.5,'dir','horz','linewidth',4)
         drawline(5.5,'dir','vert','linewidth',4)
-        % clim([0 80])
+        title('1 - rho of channels in Natural')
+        % clim([0 1])
         
-        % plot settings:
-        
-        % figure;
-        % imagesc(d_emg{2})
-        % colormap('hot')
-        % colorbar
+        % PLOT:
+        figure;
+        imagesc(group_distance); hold on;
+        axis square
+        colormap('magma')
+        colorbar
+        drawline(5.5,'dir','horz','linewidth',4)
+        drawline(5.5,'dir','vert','linewidth',4)
+        title('Distance Channels in Natural')
 
     
 
