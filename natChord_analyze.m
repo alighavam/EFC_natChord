@@ -1357,9 +1357,9 @@ switch (what)
                     tmp = tmp + squareform(pdist(swapped_flex_extend'))/length(partititons);
 
                     % Correlation of EMG Channels:
-                    tmp_corr = tmp_corr + corr(swapped_flex_extend)/length(partititons);
+                    tmp_corr = tmp_corr + cov(swapped_flex_extend)/length(partititons);
 
-                    tmp_mahalanobis = tmp_mahalanobis + d_mahalanobis(swapped_flex_extend')/length(partititons);;
+                    % tmp_mahalanobis = tmp_mahalanobis + d_mahalanobis(swapped_flex_extend')/length(partititons);;
                 end
                 d_emg_sn = d_emg_sn + tmp/length(sess);
                 corr_sn = corr_sn + tmp_corr/length(sess);
