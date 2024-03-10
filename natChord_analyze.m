@@ -1394,7 +1394,15 @@ switch (what)
         drawline(5.5,'dir','vert','linewidth',4)
         title('Distance Channels in Natural')
 
-    
+        % PLOT:
+        figure;
+        imagesc(group_mahalanobis); hold on;
+        axis square
+        colormap('magma')
+        colorbar
+        drawline(5.5,'dir','horz','linewidth',4)    
+        drawline(5.5,'dir','vert','linewidth',4)
+        title('Mahalanobis Distance Channels in Natural')
 
 
     case 'decoding'
