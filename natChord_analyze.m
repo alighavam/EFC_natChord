@@ -390,10 +390,11 @@ switch (what)
         end
         
         if (plot_option)
-            figure;
+            figure('Position',[10 10 450 1500]);
             % plotting the chord EMG patterns:
             pcolor([[pattern, zeros(size(pattern,1),1)] ; zeros(1,size(pattern,2)+1)])
             colorbar
+            clim([0 1.5])
             
             % plot settings:
             ax = gca;
@@ -1187,6 +1188,7 @@ switch (what)
         vararginoptions(varargin,{'subject_name','normalize_channels','num_fingers'})
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
+        data_all = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         sn_unique = unique(data.sn);
 
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
@@ -1204,14 +1206,37 @@ switch (what)
             for i = 1:length(sess)
                 % calculating avg chord patterns:
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'plot_option',0,'normalize_channels',normalize_channels);
+                
                 % selected patterns of input chords:
                 avg_pattern_sess = avg_pattern_sess + pattern/length(sess);
 
                 % get Euclidean distance of patterns
                 d = squareform(pdist(pattern));
                 avg_d_sess = avg_d_sess + d/length(sess);
+
+                % make the EMG pattern residuals required for Mahalanobis
+                % distance:
+                rows = data_all.sn==sn_unique(sn) & data_all.sess==i & data_all.trialCorr==1;
+                emg_patterns_all = [data_all.emg_hold_avg_e1(rows), ...
+                                    data_all.emg_hold_avg_e2(rows), ...
+                                    data_all.emg_hold_avg_e3(rows), ...
+                                    data_all.emg_hold_avg_e4(rows), ...
+                                    data_all.emg_hold_avg_e5(rows), ...
+                                    data_all.emg_hold_avg_f1(rows), ...
+                                    data_all.emg_hold_avg_f2(rows), ...
+                                    data_all.emg_hold_avg_f3(rows), ...
+                                    data_all.emg_hold_avg_f4(rows), ...
+                                    data_all.emg_hold_avg_f5(rows)];
+                chords_all = data_all.chordID(rows);
+                pattern_residuals = zeros(size(emg_patterns_all));
+                for j = 1:length(chords)
+                    idx_rows = chords_all==chords(j);
+                    tmp_chord_patterns = emg_patterns_all(idx_rows,:);
+                    pattern_residuals(idx_rows,:) = pattern(chords==chords(j),:) - tmp_chord_patterns;
+                end
+                
                 % mahalanobis distance of patterns
-                avg_mahalanobis_sess = avg_mahalanobis_sess + d_mahalanobis(pattern)/length(sess);
+                avg_mahalanobis_sess = avg_mahalanobis_sess + d_mahalanobis(pattern, cov(pattern_residuals))/length(sess);
             end
             avg_pattern = avg_pattern + avg_pattern_sess/length(sn_unique);
             avg_d = avg_d + avg_d_sess/length(sn_unique);
