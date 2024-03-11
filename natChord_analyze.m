@@ -1191,6 +1191,8 @@ switch (what)
         data_all = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         sn_unique = unique(data.sn);
 
+        C = [];
+
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
 
         % distance between muscle patterns:
@@ -1201,7 +1203,8 @@ switch (what)
             avg_pattern_sess = 0;
             avg_d_sess = 0;
             avg_mahalanobis_sess = 0;
-
+            % temp struct:
+            C_tmp = [];
             sess = unique(data.sess(data.sn==sn_unique(sn)));
             for i = 1:length(sess)
                 % calculating avg chord patterns:
@@ -1236,8 +1239,15 @@ switch (what)
                 end
                 
                 % mahalanobis distance of patterns
-                avg_mahalanobis_sess = avg_mahalanobis_sess + d_mahalanobis(pattern, cov(pattern_residuals))/length(sess);
+                d_tmp = d_mahalanobis(pattern, cov(pattern_residuals));
+                avg_mahalanobis_sess = avg_mahalanobis_sess + d_tmp/length(sess);
+                % save the RDMs:
+                C_tmp.sn = sn_unique(sn);
+                C_tmp.sess = sess(i);
+                C_tmp.d_mahalanobis{1} = d_tmp;
+                C_tmp.chordID{1} = chords;
             end
+            C = addstruct(C,C_tmp,'row','force');
             avg_pattern = avg_pattern + avg_pattern_sess/length(sn_unique);
             avg_d = avg_d + avg_d_sess/length(sn_unique);
             avg_mahalanobis = avg_mahalanobis + avg_mahalanobis_sess/length(sn_unique);
@@ -1332,7 +1342,8 @@ switch (what)
         set(gca,'YDir','reverse')
         title(sprintf('AVG Mahalanobis Distance'))
         
-
+        varargout{1} = C;
+ 
     case 'natural_distance_RDM'
         % handling input arguments:
         sampling_option = 'whole_sampled';
@@ -1340,7 +1351,7 @@ switch (what)
         
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         sn_unique = unique(data.sn);
-        
+
         % distance between muscle patterns:
         group_distance = 0;
         group_corr = 0;
@@ -2309,6 +2320,28 @@ switch (what)
         title(['sess ' sess])
         clim([0,1])
 
+    case 'Spencer_2020_muscle_model'
+        C = natChord_analyze('chord_distance_RDM','num_fingers',1);
+
+        chords = C.chordID{1}(1:10);
+        
+        idx = [(6:10)';(1:5)'];
+        chords = chords(idx);
+
+        % calculated avg_mahalanobis:
+        d_avg = 0;
+        for i = 1:length(C.d_mahalanobis)
+            d_avg = d_avg + d_mahalanobis/length(C.d_mahalanobis);
+        end
+
+        tmpA = avg_mahalanobis(6:10,6:10);
+        tmpB = avg_mahalanobis(1:5,1:5);
+        tmpC = avg_mahalanobis(1:5,6:10);
+        tmpD = avg_mahalanobis(6:10,1:5);
+        avg_mahalanobis(1:5,1:5) = tmpA;
+        avg_mahalanobis(1:5,6:10) = tmpD;
+        avg_mahalanobis(6:10,6:10) = tmpB;
+        avg_mahalanobis(6:10,1:5) = tmpC;
 
     otherwise
         error('The analysis you entered does not exist!')
