@@ -1932,7 +1932,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
