@@ -353,6 +353,7 @@ switch (what)
         sess = 1;
         vararginoptions(varargin,{'subject_name','plot_option','normalize_channels','sess'});
         
+
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         data = getrow(data, data.sess == sess & data.sn == str2double(subject_name(end-1:end)));
@@ -389,6 +390,7 @@ switch (what)
             end
         end
         
+
         if (plot_option)
             figure('Position',[10 10 450 1500]);
             % plotting the chord EMG patterns:
@@ -408,7 +410,7 @@ switch (what)
             set(gca,'YDir','reverse')
             title(['sess ' sess])
         end
-
+        
         varargout{1} = pattern;
         varargout{2} = chords;
 
@@ -860,12 +862,15 @@ switch (what)
         % getting the values of measure:
         values = eval(['data.' measure]);
         
+        gooz = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
+
         % making the output of the model:
         out = [];
         for sn = 1:length(subj)
             for i = 1:length(sess)
                 % calculating avg chord patterns:
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' sprintf('%.02d',subj(sn))],'plot_option',0,'normalize_channels',1,'sess',sess(i));
+                % pattern = gooz.pattern_prewhitened{gooz.sn==subj(sn) & gooz.sess==sess(i)};
                 n = get_num_active_fingers(chords);
                 
                 for j = 1:length(chords)
@@ -919,7 +924,7 @@ switch (what)
                     title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
                     xlabel('Norm EMG','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
-                    xlim([0,3.6])
+                    % xlim([0,3.6])
                     ylim([0,4])
                 end
     
@@ -930,7 +935,7 @@ switch (what)
                     title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
                     xlabel('Norm EMG (n regressed out)','FontSize',my_font.xlabel)
                     ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
-                    xlim([-1.5,1.5])
+                    % xlim([-1.5,1.5])
                     ylim([-2,2])
                 end
             end
@@ -2350,8 +2355,8 @@ switch (what)
     case 'EMG_prewhitening_matrix'
         normalize_channels = 1;
         plot_option = 1;
-        sn = 1;
-        vararginoptions(varargin,{'normalize_channels','plot_option','sn'})
+        subj_num = 1;
+        vararginoptions(varargin,{'normalize_channels','plot_option','subj_num'})
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         data_all = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         sn_unique = unique(data.sn);
@@ -2405,14 +2410,14 @@ switch (what)
             emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
             figure('Position',[10 10 450 1500]);
             % plotting the chord EMG patterns:
-            pcolor([[C.pattern{sn}, zeros(size(C.pattern{sn},1),1)] ; zeros(1,size(C.pattern{sn},2)+1)])
+            pcolor([[C.pattern{subj_num}, zeros(size(C.pattern{subj_num},1),1)] ; zeros(1,size(C.pattern{subj_num},2)+1)])
             colorbar
             % clim([0 1.5])
             
             % plot settings:
             ax = gca;
             
-            set(ax,'YTick',(1:size(C.pattern{sn},1))+0.5)
+            set(ax,'YTick',(1:size(C.pattern{subj_num},1))+0.5)
             set(ax,'YTickLabel',chords)
             
             set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
@@ -2422,14 +2427,14 @@ switch (what)
 
             figure('Position',[10 10 450 1500]);
             % plotting the chord EMG patterns:
-            pcolor([[C.pattern_prewhitened{sn}, zeros(size(C.pattern_prewhitened{sn},1),1)] ; zeros(1,size(C.pattern_prewhitened{sn},2)+1)])
+            pcolor([[C.pattern_prewhitened{subj_num}, zeros(size(C.pattern_prewhitened{subj_num},1),1)] ; zeros(1,size(C.pattern_prewhitened{subj_num},2)+1)])
             colorbar
             % clim([0 1.5])
             
             % plot settings:
             ax = gca;
             
-            set(ax,'YTick',(1:size(C.pattern_prewhitened{sn},1))+0.5)
+            set(ax,'YTick',(1:size(C.pattern_prewhitened{subj_num},1))+0.5)
             set(ax,'YTickLabel',chords)
             
             set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
