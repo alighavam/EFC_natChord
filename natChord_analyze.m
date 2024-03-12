@@ -165,7 +165,7 @@ switch (what)
                     tmp.MD_std = std(data.MD(row));
                     tmp.MT_std = std(data.MT(row));
                     tmp.RT_std = std(data.RT(row));
-
+                    
                     tmp.emg_hold_avg_e1 = mean(data.emg_hold_avg_e1(row));
                     tmp.emg_hold_avg_e2 = mean(data.emg_hold_avg_e2(row));
                     tmp.emg_hold_avg_e3 = mean(data.emg_hold_avg_e3(row));
@@ -192,7 +192,7 @@ switch (what)
         ANA.scale_f4 = zeros(length(ANA.chordID),1);
         ANA.scale_f5 = zeros(length(ANA.chordID),1);
         
-        chords = [19999,91999,99199,99919,99991,29999,92999,99299,99929,99992];
+        % chords = [19999,91999,99199,99919,99991,29999,92999,99299,99929,99992];
         % adding EMG scale factors to dataframe:
         % loop on subjects:
         for i = 1:length(subjects)
@@ -1230,6 +1230,10 @@ switch (what)
                                     data_all.emg_hold_avg_f3(rows), ...
                                     data_all.emg_hold_avg_f4(rows), ...
                                     data_all.emg_hold_avg_f5(rows)];
+                if (normalize_channels)
+                    scales = get_emg_scales(sn_unique(sn),sess(i));
+                    emg_patterns_all = emg_patterns_all ./ scales;
+                end
                 chords_all = data_all.chordID(rows);
                 pattern_residuals = zeros(size(emg_patterns_all));
                 for j = 1:length(chords)
@@ -1968,7 +1972,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+additive+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2072,7 +2076,7 @@ switch (what)
 
         % PLOT - regression results:
         figure;
-        ax1 = axes('Units', 'centimeters', 'Position', [2 2 3.5 3],'Box','off');
+        ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
         for j = 1:length(model_names)
             % getting cross validated r:
             r = C.r(strcmp(C.model,model_names{j}));
@@ -2342,6 +2346,97 @@ switch (what)
         avg_mahalanobis(1:5,6:10) = tmpD;
         avg_mahalanobis(6:10,6:10) = tmpB;
         avg_mahalanobis(6:10,1:5) = tmpC;
+
+    case 'EMG_prewhitening_matrix'
+        normalize_channels = 1;
+        plot_option = 1;
+        sn = 1;
+        vararginoptions(varargin,{'normalize_channels','plot_option','sn'})
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
+        data_all = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
+        sn_unique = unique(data.sn);
+
+        C = [];
+        for sn = 1:length(sn_unique)
+            % temp struct:
+            C_tmp = [];
+            sess = unique(data.sess(data.sn==sn_unique(sn)));
+            for i = 1:length(sess)
+                % calculating avg chord patterns:
+                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'plot_option',0,'normalize_channels',normalize_channels);
+
+                % make the EMG pattern residuals:
+                rows = data_all.sn==sn_unique(sn) & data_all.sess==i & data_all.trialCorr==1;
+                emg_patterns_all = [data_all.emg_hold_avg_e1(rows), ...
+                                    data_all.emg_hold_avg_e2(rows), ...
+                                    data_all.emg_hold_avg_e3(rows), ...
+                                    data_all.emg_hold_avg_e4(rows), ...
+                                    data_all.emg_hold_avg_e5(rows), ...
+                                    data_all.emg_hold_avg_f1(rows), ...
+                                    data_all.emg_hold_avg_f2(rows), ...
+                                    data_all.emg_hold_avg_f3(rows), ...
+                                    data_all.emg_hold_avg_f4(rows), ...
+                                    data_all.emg_hold_avg_f5(rows)];
+                if (normalize_channels)
+                    scales = get_emg_scales(sn_unique(sn),sess(i));
+                    emg_patterns_all = emg_patterns_all ./ scales;
+                end
+
+                chords_all = data_all.chordID(rows);
+                pattern_residuals = zeros(size(emg_patterns_all));
+                for j = 1:length(chords)
+                    idx_rows = chords_all==chords(j);
+                    tmp_chord_patterns = emg_patterns_all(idx_rows,:);
+                    pattern_residuals(idx_rows,:) = tmp_chord_patterns - pattern(chords==chords(j),:);
+                end
+                
+                cov_res = cov(pattern_residuals);
+                C_tmp.sn = sn_unique(sn);
+                C_tmp.sess = sess(i);
+                C_tmp.cov_res{1} = cov_res;
+                C_tmp.pattern{1} = pattern;
+                C_tmp.pattern_prewhitened{1} = pattern * cov_res^-(1/2);
+            end
+            C = addstruct(C,C_tmp,'row','force');
+        end    
+        varargout{1} = C;
+
+        if (plot_option)
+            emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
+            figure('Position',[10 10 450 1500]);
+            % plotting the chord EMG patterns:
+            pcolor([[C.pattern{sn}, zeros(size(C.pattern{sn},1),1)] ; zeros(1,size(C.pattern{sn},2)+1)])
+            colorbar
+            % clim([0 1.5])
+            
+            % plot settings:
+            ax = gca;
+            
+            set(ax,'YTick',(1:size(C.pattern{sn},1))+0.5)
+            set(ax,'YTickLabel',chords)
+            
+            set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
+            set(ax,'XTickLabel',emg_locs_names)
+            
+            set(gca,'YDir','reverse')
+
+            figure('Position',[10 10 450 1500]);
+            % plotting the chord EMG patterns:
+            pcolor([[C.pattern_prewhitened{sn}, zeros(size(C.pattern_prewhitened{sn},1),1)] ; zeros(1,size(C.pattern_prewhitened{sn},2)+1)])
+            colorbar
+            % clim([0 1.5])
+            
+            % plot settings:
+            ax = gca;
+            
+            set(ax,'YTick',(1:size(C.pattern_prewhitened{sn},1))+0.5)
+            set(ax,'YTickLabel',chords)
+            
+            set(ax,'XTick', (1:size(emg_locs_names,1))+0.5)
+            set(ax,'XTickLabel',emg_locs_names)
+            
+            set(gca,'YDir','reverse')
+        end
 
     otherwise
         error('The analysis you entered does not exist!')
