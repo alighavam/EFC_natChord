@@ -128,12 +128,11 @@ switch (what)
     case 'make_chord_dataframe'
         % fields:
         % sn, sess, chordID, num_trials, num_fingers, MD, MT, RT, MD_std, MT_std, RT_std  
-
+        
         % load trial dataframe:
         data = dload(fullfile(project_path, 'analysis', 'natChord_all.tsv'));
         subjects = unique(data.sn);
         sess = data.sess;
-        unique_sess = unique(sess);
         chords = unique(data.chordID);
         % sorting chords in an arbitrary way:
         chords_sorted = [19999, 91999, 99199, 99919, 99991, 29999, 92999, 99299, 99929, 99992];
@@ -146,8 +145,9 @@ switch (what)
         ANA = [];
         % loop on subjects:
         for i = 1:length(subjects)
+            subj_sess = unique(data.sess(data.sn==subjects(i)));
             % loop on sess:
-            for j = 1:length(unique(sess))
+            for j = 1:length(subj_sess)
                 % loop on chords:
                 for k = 1:length(chords)
                     tmp = [];
@@ -307,7 +307,7 @@ switch (what)
         else
             % Preprocessing and dealing with the natural EMGs:
             fprintf("Processing natural EMG data...\n\n")
-            make_natural_emg(subjName, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
+            make_natural_emg(subject_name, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
         end
 
     case 'natural_emg_autocorr'
@@ -396,7 +396,7 @@ switch (what)
             % plotting the chord EMG patterns:
             pcolor([[pattern, zeros(size(pattern,1),1)] ; zeros(1,size(pattern,2)+1)])
             colorbar
-            clim([0 1.5])
+            % clim([0 1.5])
             
             % plot settings:
             ax = gca;
@@ -2368,10 +2368,10 @@ switch (what)
             sess = unique(data.sess(data.sn==sn_unique(sn)));
             for i = 1:length(sess)
                 % calculating avg chord patterns:
-                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'plot_option',0,'normalize_channels',normalize_channels);
+                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' num2str(sn_unique(sn),'%.2d')],'sess',sess(i),'plot_option',0,'normalize_channels',normalize_channels);
 
                 % make the EMG pattern residuals:
-                rows = data_all.sn==sn_unique(sn) & data_all.sess==i & data_all.trialCorr==1;
+                rows = data_all.sn==sn_unique(sn) & data_all.sess==sess(i) & data_all.trialCorr==1;
                 emg_patterns_all = [data_all.emg_hold_avg_e1(rows), ...
                                     data_all.emg_hold_avg_e2(rows), ...
                                     data_all.emg_hold_avg_e3(rows), ...
@@ -2401,8 +2401,10 @@ switch (what)
                 C_tmp.cov_res{1} = cov_res;
                 C_tmp.pattern{1} = pattern;
                 C_tmp.pattern_prewhitened{1} = pattern * cov_res^-(1/2);
+
+                C = addstruct(C,C_tmp,'row','force');
             end
-            C = addstruct(C,C_tmp,'row','force');
+            
         end    
         varargout{1} = C;
 
