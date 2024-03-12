@@ -852,52 +852,51 @@ switch (what)
         plot_option = 1;
         measure = 'MD_efc';
         vararginoptions(varargin,{'plot_option','measure'});
-
+        
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
         subj = unique(data.sn);
-        sess = unique(data.sess);
         num_fingers = unique(data.num_fingers);
         
         % getting the values of measure:
         values = eval(['data.' measure]);
         
-        gooz = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
-
         % making the output of the model:
         out = [];
         for sn = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(sn)));
+
             for i = 1:length(sess)
                 % calculating avg chord patterns:
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' sprintf('%.02d',subj(sn))],'plot_option',0,'normalize_channels',1,'sess',sess(i));
-                % pattern = gooz.pattern_prewhitened{gooz.sn==subj(sn) & gooz.sess==sess(i)};
                 n = get_num_active_fingers(chords);
                 
                 for j = 1:length(chords)
                     tmp.sn = subj(sn);
-                    tmp.sess = i;
+                    tmp.sess = sess(i);
                     tmp.num_fingers = n(j);
                     tmp.chordID = chords(j);
                     tmp.mag = vecnorm(pattern(chords==chords(j),:)')';
                     tmp.measure = values(data.chordID==chords(j) & data.sn==subj(sn) & data.sess==sess(i));
                     out = addstruct(out,tmp,'row',1);
-                end            
+                end
             end
         end
-
+        
         % partial correlation between MD and magnitude considering
         % number of fingers effect:
         C  = [];
         mag_n = [];
         for sn = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(sn)));
             for i = 1:length(sess)
-                X = out.mag(out.sess==i & out.sn==subj(sn));
-                Y = out.measure(out.sess==i & out.sn==subj(sn));
-                Z = make_design_matrix(out.chordID(out.sess==i & out.sn==subj(sn)),'n_fing');
+                X = out.mag(out.sess==sess(i) & out.sn==subj(sn));
+                Y = out.measure(out.sess==sess(i) & out.sn==subj(sn));
+                Z = make_design_matrix(out.chordID(out.sess==sess(i) & out.sn==subj(sn)),'n_fing');
                 [rho,p,resX,resY] = partial_corr(X,Y,Z);
                 
                 tmp.sn = subj(sn);
-                tmp.sess = i;
+                tmp.sess = sess(i);
                 tmp.rho = rho;
                 tmp.p = p;
                 tmp.res_mag = {resX};
@@ -912,16 +911,17 @@ switch (what)
 
         if (plot_option)
             for sn = 1:length(subj)
+                sess = unique(data.sess(data.sn==subj(sn)));
                 for i = 1:length(sess)
                     figure;
                     hold on;
                     % single finger:
-                    scatter_corr(out.mag(out.num_fingers==1 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==1 & out.sess==i & out.sn==subj(sn)), 'r', 'o'); hold on
+                    scatter_corr(out.mag(out.num_fingers==1 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==1 & out.sess==sess(i) & out.sn==subj(sn)), 'r', 'o'); hold on
                     % 3 finger:
-                    scatter_corr(out.mag(out.num_fingers==3 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==3 & out.sess==i & out.sn==subj(sn)), 'b', 'filled')
+                    scatter_corr(out.mag(out.num_fingers==3 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==3 & out.sess==sess(i) & out.sn==subj(sn)), 'b', 'filled')
                     % 5 finger:
-                    scatter_corr(out.mag(out.num_fingers==5 & out.sess==i & out.sn==subj(sn)), out.measure(out.num_fingers==5 & out.sess==i & out.sn==subj(sn)), 'k', 'filled')
-                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
+                    scatter_corr(out.mag(out.num_fingers==5 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==5 & out.sess==sess(i) & out.sn==subj(sn)), 'k', 'filled')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],sess(i)),'FontSize',my_font.title)
                     xlabel('Norm EMG','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
                     % xlim([0,3.6])
@@ -931,8 +931,8 @@ switch (what)
                 for i = 1:length(sess)
                     figure;
                     hold on
-                    scatter_corr(C.res_mag{C.sess==i & C.sn==subj(sn)}, C.res_measure{C.sess==i & C.sn==subj(sn)}, 'k', 'o')
-                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],i),'FontSize',my_font.title)
+                    scatter_corr(C.res_mag{C.sess==sess(i) & C.sn==subj(sn)}, C.res_measure{C.sess==sess(i) & C.sn==subj(sn)}, 'k', 'o')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],sess(i)),'FontSize',my_font.title)
                     xlabel('Norm EMG (n regressed out)','FontSize',my_font.xlabel)
                     ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
                     % xlim([-1.5,1.5])
@@ -940,7 +940,6 @@ switch (what)
                 end
             end
         end
-        
         varargout{1} = C;
         varargout{2} = out;
 
@@ -1053,7 +1052,6 @@ switch (what)
         
         % loading data:
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-        sess = unique(data.sess);
         subjects = unique(data.sn);
         
         % tranforming subject numbers to subject names:
@@ -1062,20 +1060,22 @@ switch (what)
         % container for the dataframe:
         C = [];
         for sn = 1:length(subjects)
+            % set natural EMG file name:
+            file_name = fullfile(project_path, 'analysis', ['natChord_' subject_names(sn,:) '_emg_natural_' sampling_option '.mat']);
+            
+            % loading natural EMG dists:
+            emg_dist = load(file_name);
+            emg_dist = emg_dist.emg_natural_dist;
+
+            sess = unique(data.sess(data.sn == subjects(sn)));
             for j = 1:length(sess)
-                % set natural EMG file name:
-                file_name = fullfile(project_path, 'analysis', ['natChord_' subject_names(sn,:) '_emg_natural_' sampling_option '.mat']);
-                
-                % loading natural EMG dists:
-                emg_dist = load(file_name);
-                emg_dist = emg_dist.emg_natural_dist;
-                
                 % scaling factors:
                 scales = get_emg_scales(subjects(sn),sess(j));
-    
+                
+                emg_dist_sess = getrow(emg_dist,emg_dist.sess==sess(j));
                 % normalizing the natural EMGs:
-                for i = 1:length(emg_dist.dist)
-                    emg_dist.dist{i} = emg_dist.dist{i} ./ scales;
+                for i = 1:length(emg_dist_sess.dist)
+                    emg_dist_sess.dist{i} = emg_dist_sess.dist{i} ./ scales;
                 end
     
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_names(sn,:),'plot_option',0,'normalize_channels',1,'sess',sess(j));
@@ -1087,7 +1087,7 @@ switch (what)
                     row = data.sn==subjects(sn) & data.chordID==chords(k);
                     chords_mean_dev(k) = data.MD_efc(row & data.sess==sess(j));
                 end
-
+                
                 % container for the each session's dataframe:
                 tmp = [];
 
@@ -1096,13 +1096,13 @@ switch (what)
                     d_avg = 0;
                     slope_avg = 0;
                     log_slope_avg = 0;
-                    for i = 1:length(emg_dist.partition(emg_dist.sess==sess(j)))
+                    for i = 1:length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)))
                         % sorted distances from the natural dist:
-                        d = get_d_from_natural(pattern(k,:)',emg_dist.dist{emg_dist.sess==sess(j) & emg_dist.partition==i}, 'd_type', d_type, 'lambda',lambda);
+                        d = get_d_from_natural(pattern(k,:)',emg_dist_sess.dist{emg_dist_sess.sess==sess(j) & emg_dist_sess.partition==i}, 'd_type', d_type, 'lambda',lambda);
                         
-                        d_avg = d_avg + d(n_thresh)/length(emg_dist.partition(emg_dist.sess==sess(j)));
-                        slope_avg = slope_avg + linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0)/length(emg_dist.partition(emg_dist.sess==sess(j))); %n_thresh/d(n_thresh)^10;
-                        log_slope_avg = log_slope_avg + log(linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0))/length(emg_dist.partition(emg_dist.sess==sess(j)));
+                        d_avg = d_avg + d(n_thresh)/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)));
+                        slope_avg = slope_avg + linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0)/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j))); %n_thresh/d(n_thresh)^10;
+                        log_slope_avg = log_slope_avg + log(linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0))/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)));
                     end
                     % storing the information:
                     tmp.sn(cnt,1) = subjects(sn);
@@ -1126,7 +1126,7 @@ switch (what)
         log_slope_n = [];
         MD_n = [];
         for sn = 1:length(subjects)
-            for i = 1:length(unique(C.sess))
+            for i = 1:length(unique(C.sess(C.sn==subjects(sn))))
                 tmp = [];
 
                 % correlation while regressing out the num finger effect:
@@ -1151,7 +1151,7 @@ switch (what)
 
         if (plot_option)
             for sn = 1:length(subjects)
-                for i = 1:length(unique(C.sess))
+                for i = 1:length(unique(C.sess(C.sn==subjects(sn))))
                     figure;
                     % single finger:
                     hold on
@@ -1170,7 +1170,7 @@ switch (what)
                 legend('1f','','','','','3f','','','','','5f','','','','')
                 legend boxoff
 
-                for i = 1:length(unique(C.sess))
+                for i = 1:length(unique(C.sess(C.sn==subjects(sn))))
                     figure;
                     hold on
                     scatter_corr(C.log_slope_n(C.sn==subjects(sn) & C.sess==i), C.MD_n(C.sn==subjects(sn) & C.sess==i), 'k', 'o')
@@ -1977,7 +1977,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
