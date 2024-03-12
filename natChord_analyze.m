@@ -1724,7 +1724,7 @@ switch (what)
     case 'model_testing_all'
         % handling input arguments:
         measure = 'MD_efc';
-        model_names = {'n_fing','n_fing+magnitude','n_fing+magnitude+nSphere','n_fing+additive+2fing_adj','n_fing+additive+2fing_adj+magnitude+nSphere'};
+        model_names = {'n_fing','n_fing+nSphere','n_fing+magnitude','n_fing+magnitude+nSphere'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -1977,7 +1977,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+additive+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+chord_pattern+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
