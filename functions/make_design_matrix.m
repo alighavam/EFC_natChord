@@ -90,7 +90,7 @@ switch model_name
 
     case 'magnitude'
         out = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
-            
+        
         magnitude = out.magnitude(out.sn==sn & out.sess==sess);
         out_chordID = out.chordID(out.sn==sn & out.sess==sess);
         
@@ -116,7 +116,13 @@ switch model_name
         % calculate group avg:
         avg_log_slope = 0;
         for i = 1:length(sn_unique)
-            avg_log_slope = avg_log_slope + C.log_slope(C.sn==sn_unique(i) & C.sess==sess)/length(sn_unique);
+            % getting the subject session average:
+            sess = unique(C.sess(C.sn==sn_unique(i)));
+            tmp_log_slope = 0;
+            for j = 1:length(sess)
+                tmp_log_slope = tmp_log_slope + C.log_slope(C.sn==sn_unique(i) & C.sess==sess(j))/length(sess);
+            end
+            avg_log_slope = avg_log_slope + tmp_log_slope/length(sn_unique);
         end
         C_chordID = C.chordID(C.sn==1 & C.sess==1);
         
@@ -133,9 +139,16 @@ switch model_name
         % calculate group avg:
         avg_magnitude = 0;
         for i = 1:length(sn_unique)
-            avg_magnitude = avg_magnitude + out.magnitude(out.sn==sn_unique(i) & out.sess==sess)/length(sn_unique);
+            % getting the subject session average:
+            sess = unique(out.sess(out.sn==sn_unique(i)));
+            tmp_magnitude = 0;
+            for j = 1:length(sess)
+                tmp_magnitude = tmp_magnitude + out.magnitude(out.sn==sn_unique(i) & out.sess==sess(j))/length(sess);
+            end
+
+            avg_magnitude = avg_magnitude + tmp_magnitude/length(sn_unique);
         end
-        out_chordID = out.chordID(out.sn==1 & out.sess==sess);
+        out_chordID = out.chordID(out.sn==1 & out.sess==1);
 
         % making the design matrix:
         X = zeros(size(chords));
@@ -146,9 +159,9 @@ switch model_name
     case 'chord_pattern'
         % calculate group avg:
         avg_pattern = 0;
-        for i = 1:4
+        for i = 1:5
             [pattern,chordID] = natChord_analyze('avg_chord_patterns','subject_name',['subj0' num2str(i)],'plot_option',0,'sess',sess);
-            avg_pattern = avg_pattern + pattern/4;
+            avg_pattern = avg_pattern + pattern/5;
         end
         
         % making the design matrix:
