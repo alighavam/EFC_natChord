@@ -265,6 +265,7 @@ switch (what)
         [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
         data.log_slope = C.log_slope;
         data.log_slope_n = C.log_slope_n;
+        data.d = C.d;
 
         % magnitude model:
         [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
@@ -842,7 +843,7 @@ switch (what)
         legend boxoff
         title('AVG EMG activity','FontSize',my_font.title)
         xlim([0,length(mean_channels)+1])
-        ylim([0,0.8])
+        % ylim([0,0.8])
         xlabel('EMG channels','FontSize',my_font.xlabel)
         ylabel('AVG Normalized EMG')
         xticks(1:length(mean_channels))
@@ -1066,20 +1067,26 @@ switch (what)
             % loading natural EMG dists:
             emg_dist = load(file_name);
             emg_dist = emg_dist.emg_natural_dist;
-
+            
+            % gooz = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
             sess = unique(data.sess(data.sn == subjects(sn)));
             for j = 1:length(sess)
                 % scaling factors:
                 scales = get_emg_scales(subjects(sn),sess(j));
+
+                % sigma = gooz.cov_res{gooz.sn==subjects(sn) & gooz.sess==sess(j)};
                 
                 emg_dist_sess = getrow(emg_dist,emg_dist.sess==sess(j));
                 % normalizing the natural EMGs:
                 for i = 1:length(emg_dist_sess.dist)
-                    emg_dist_sess.dist{i} = emg_dist_sess.dist{i} ./ scales;
+                    emg_dist_sess.dist{i} = (emg_dist_sess.dist{i} ./ scales); % * sigma^-(1/2): Ali did a prewhitening test
                 end
     
                 [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',subject_names(sn,:),'plot_option',0,'normalize_channels',1,'sess',sess(j));
                 n = get_num_active_fingers(chords);
+
+                % pattern = gooz.pattern_prewhitened{gooz.sn==subjects(sn) & gooz.sess==sess(j)};
+                
     
                 % getting avg mean deviation of chords across sessions:
                 chords_mean_dev = zeros(length(chords),1);
