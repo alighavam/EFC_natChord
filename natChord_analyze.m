@@ -240,7 +240,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4,7]'];
+        subject_mapping = [subjects , [1,5,2,4,7, 15]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -287,8 +287,6 @@ switch (what)
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
         data = dload(fullfile(project_path,'analysis','natChord_all.tsv'));
-        sess = unique(data.sess);
-        sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
         
         % EMG filters:
         % Define filter parameters
@@ -300,12 +298,18 @@ switch (what)
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
             for i = 1:length(subject_name)        
+                sess = unique(data.sess(data.sn==str2double(subject_name(end-1:end))));
+                sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
+
                 % Preprocessing and dealing with the natural EMGs:
                 fprintf("Processing natural EMG data...\n\n")
                 make_natural_emg(subject_name{i}, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
             end
         % if a single subject as a char was given:
         else
+            sess = unique(data.sess(data.sn==str2double(subject_name(end-1:end))));
+            sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
+
             % Preprocessing and dealing with the natural EMGs:
             fprintf("Processing natural EMG data...\n\n")
             make_natural_emg(subject_name, sess_cell, fs_emg, sos, g,natural_window_type,natural_window_size,sampling_option,wn_spacing);
