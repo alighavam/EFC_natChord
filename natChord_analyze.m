@@ -1111,7 +1111,7 @@ switch (what)
                         % sorted distances from the natural dist:
                         d = get_d_from_natural(pattern(k,:)',emg_dist_sess.dist{emg_dist_sess.sess==sess(j) & emg_dist_sess.partition==i}, 'd_type', d_type, 'lambda',lambda);
                         
-                        d_avg = d_avg + d(n_thresh)/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)));
+                        d_avg = d_avg + mean(d(1:n_thresh))/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)));
                         slope_avg = slope_avg + linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0)/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j))); %n_thresh/d(n_thresh)^10;
                         log_slope_avg = log_slope_avg + log(linslope([d(1:n_thresh).^10,(1:n_thresh)'],'intercept',0))/length(emg_dist_sess.partition(emg_dist_sess.sess==sess(j)));
                     end
@@ -1988,7 +1988,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+nSphere_avg','n_fing+additive','n_fing+chord_pattern','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+d_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+d_avg','n_fing+magnitude_avg+d_avg','n_fing+chord_pattern_avg','n_fing+chord_pattern_avg+d_avg','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+d_avg','n_fing+additive+chord_pattern_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2416,7 +2416,8 @@ switch (what)
                 C = addstruct(C,C_tmp,'row','force');
             end
             
-        end    
+        end 
+        C.chordID = chords;
         varargout{1} = C;
 
         if (plot_option)
