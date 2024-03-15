@@ -132,6 +132,29 @@ switch model_name
             X(i,1) =  avg_log_slope(C_chordID==chords(i));
         end
     
+    case 'd_avg'
+        C = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        sn_unique = unique(C.sn);
+        
+        % calculate group avg:
+        avg_d = 0;
+        for i = 1:length(sn_unique)
+            % getting the subject session average:
+            sess = unique(C.sess(C.sn==sn_unique(i)));
+            tmp_d = 0;
+            for j = 1:length(sess)
+                tmp_d = tmp_d + C.d(C.sn==sn_unique(i) & C.sess==sess(j))/length(sess);
+            end
+            avg_d = avg_d + tmp_d/length(sn_unique);
+        end
+        C_chordID = C.chordID(C.sn==1 & C.sess==1);
+        
+        % making the design matrix:
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) =  avg_d(C_chordID==chords(i));
+        end
+    
     case 'magnitude_avg'
         out = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
         sn_unique = unique(out.sn);
@@ -156,14 +179,14 @@ switch model_name
             X(i,1) =  avg_magnitude(out_chordID==chords(i));
         end
 
-    case 'chord_pattern'
+    case 'chord_pattern_avg'
+        C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
         % calculate group avg:
         avg_pattern = 0;
-        for i = 1:5
-            [pattern,chordID] = natChord_analyze('avg_chord_patterns','subject_name',['subj0' num2str(i)],'plot_option',0,'sess',sess);
-            avg_pattern = avg_pattern + pattern/5;
+        for i = 1:length(C.pattern)
+            avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
         end
-        
+        chordID = C.chordID;
         % making the design matrix:
         X = zeros(length(chords),10);
         for i = 1:length(chords)
