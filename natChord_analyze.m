@@ -56,7 +56,7 @@ switch (what)
                          'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
         end
     
-    case 'make_all_dataframe'
+    case 'make_all_ dataframe'
         % Calculate RT, MT, MD for each trial of each subejct
         % and create a struct without the mov signals and save it as a
         % single struct called natChord_all.mat
@@ -277,7 +277,6 @@ switch (what)
     case 'make_natural_dist'
         subject_name = 'subj01';
         fs_emg = 2148.1481;         % EMG sampling rate in Hz  
-        lpf = 0;                    % flag to do lowpass filtering;
         Fstop_lpf = 40;
         natural_window_size = 20;      % window size to sample natural EMG
         sampling_option = 'whole_thresholded';      % sampling option to select windows from natural EMGs.
@@ -1988,7 +1987,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+d_avg','n_fing+magnitude_avg','n_fing+magnitude_avg+d_avg','n_fing+magnitude_avg+d_avg','n_fing+chord_pattern_avg','n_fing+chord_pattern_avg+d_avg','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+d_avg','n_fing+additive+chord_pattern_avg'};
+        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2063,6 +2062,8 @@ switch (what)
             for j = i+1:length(model_names)
                 r2 = C.r(strcmp(C.model,model_names{j}));
                 % paired t-test, one-tail r2>r1:
+                r2
+                r1
                 [t,p] = ttest(r2,r1,1,'paired');
                 tmp.models = {model_names{i},model_names{j}};
                 tmp.t = t;
@@ -2081,8 +2082,8 @@ switch (what)
         % else
         %     noise_ceil = mean(corr_struct.RT);
         % end
-        noise_ceil = 0.8685;
-        % noise_ceil = 0.2803;
+        noise_ceil = 0.8591;
+        % noise_ceil = 0.2536;
 
         for i = 1:length(model_names)
             r = C.r(strcmp(C.model,model_names{i}));
