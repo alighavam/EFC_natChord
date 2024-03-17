@@ -240,7 +240,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4,7, 15]'];
+        subject_mapping = [subjects , [1,5,2,4,7,15]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -508,9 +508,9 @@ switch (what)
 
         % getting the values of measure:
         values = eval(['data.' measure]);
-
+        
         cond_vec = data.num_fingers;
-        [sem_subj, X_subj, Y_subj] = get_sem(values, data.sn, data.sess, cond_vec);
+        [sem_subj, ~, ~] = get_sem(values, data.sn, data.sess, cond_vec);
 
         % avg trend acorss sessions:
         fig = figure('Position', [500 500 100 200]);
@@ -531,7 +531,7 @@ switch (what)
         ylabel('','FontSize',my_font.title)
         % ylim([0.2 2.7])
         % ylim([0 2500])
-        % ylim([0 450])
+        ylim([0 500])
         xlim([0.8 2.2])
         % h = gca;
         % h.YTick = linspace(h.YTick(1),h.YTick(end),5);
@@ -1851,81 +1851,84 @@ switch (what)
         subj = subj(1,:);
         subj_unique = unique(subj);
         C = [];
-        % loop on n_fing:
+        % loop on num fingers:
         for i = 1:length(unique(n_fing_unique))
             for sn = 1:length(subj_unique)
-                % variable to hold the values of all the repetitions of
-                % the chords. Chords are stacked on top of each other.
-                % Meaning that each row of the tmp_container will be
-                % a specific chord and columns are all the repetitions.
-                % Therefore, number of columns will be 'repetition*number of times chord was visited in the session'
-                tmp_container = [];
-                chords_tmp = chords(n==n_fing_unique(i));
-                for k = 1:length(chords_tmp)
-                    % getting all the data that chord was repeated. the
-                    % columns are the times that the chord was
-                    % repeated in each session:
-                    values_tmp = values(:, subj==subj_unique(sn) & n_fing==n_fing_unique(i) & chordID==chords_tmp(k));
-                    num_visited = size(values_tmp,2);
-                    if (num_visited==4)
-                        values_tmp = values_tmp(:,1:2);
+                subj_sess = unique(sess(subj==subj_unique(sn)));
+                for j = 1:length(subj_sess)
+                    % variable to hold the values of all the repetitions of
+                    % the chords. Chords are stacked on top of each other.
+                    % Meaning that each row of the tmp_container will be
+                    % a specific chord and columns are all the repetitions.
+                    % Therefore, number of columns will be 'repetition*number of times chord was visited in the session'
+                    tmp_container = [];
+                    chords_tmp = chords(n==n_fing_unique(i));
+                    for k = 1:length(chords_tmp)
+                        % getting all the data that chord was repeated. the
+                        % columns are the times that the chord was
+                        % repeated in each session:
+                        values_tmp = values(:, subj==subj_unique(sn) & sess==j & n_fing==n_fing_unique(i) & chordID==chords_tmp(k));
+                        num_visited = size(values_tmp,2);
+    
+                        % this condition is because two of the chords were
+                        % presented four times in each session (by mistake):
+                        if (num_visited==4)
+                            values_tmp = (values_tmp(:,1:2)+values_tmp(:,3:4))*0.5;
+                        end
+                        tmp_container = [tmp_container ; values_tmp(:)'];
                     end
-                    tmp_container = [tmp_container ; values_tmp(:)'];
+                    
+                    num_visited = size(tmp_container,2)/repetitions;
+                    for k = 1:num_visited
+                        tmp = [];
+                        tmp.sn = subj_unique(sn);
+                        tmp.sess = j;
+                        tmp.num_fingers = n_fing_unique(i);
+                        % the time that the chord was visited during the
+                        % sessions.
+                        tmp.visit = k;
+                        tmp.value_subj(1,:) = mean(tmp_container(:,(k-1)*repetitions+1:k*repetitions),1,'omitmissing'); 
+                        C = addstruct(C,tmp,'row',1);
+                    end
                 end
-                
-                tmp = [];
-                num_visited = size(tmp_container,2)/repetitions;
-                for k = 1:num_visited
-                    tmp.num_fingers = n_fing_unique(i);
-                    tmp.sn = subj_unique(sn);
-                    % the time that the chord was visited during the
-                    % sessions.
-                    tmp.visit = k;
-                    % size(tmp_container)
-                    tmp.value_subj(1,:) = mean(tmp_container(:,(k-1)*repetitions+1:k*repetitions),1,'omitmissing'); 
-                    C = addstruct(C,tmp,'row',1);
-                end
-            end
-        end
-
-        for i = 1:length(subj_unique)
-            for i = 1:length(n_fing_unique)
-
             end
         end
         
         % PLOT - repetition trends across visits and sessions:
-        figure;
-        ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-        visits = unique(C.visit);
-        offset_size = 5;
-        x_offset = 0:offset_size:5*(length(visits)-1);
-        for i = 1:length(n_fing_unique)
-            for k = 1:length(visits)
-                row = C.num_fingers==n_fing_unique(i) & C.visit==k;
-                plot((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1),'Color',colors_red(n_fing_unique(i),:),'LineWidth',1); hold on;
-                % errorbar((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), mean(C.sem(C.num_fingers==i & C.sess==j, :),1), 'CapSize', 0, 'Color', colors_blue(n_fing_unique(i),:));
-                scatter((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), 10,'MarkerFaceColor',colors_red(n_fing_unique(i),:),'MarkerEdgeColor',colors_red(n_fing_unique(i),:))
+        sess = unique(C.sess);
+        for j = 1:length(sess)
+            figure;
+            ax1 = axes('Units', 'centimeters', 'Position', [2 2 2.4 5],'Box','off');
+            visits = unique(C.visit);
+            offset_size = 5;
+            x_offset = 0:offset_size:5*(length(visits)-1);
+            for i = 1:length(n_fing_unique)
+                for k = 1:length(visits)
+                    row = C.num_fingers==n_fing_unique(i) & C.visit==k & C.sess==j;
+                    plot((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1),'Color',colors_blue(n_fing_unique(i),:),'LineWidth',1); hold on;
+                    % errorbar((1:repetitions)+x_offset(k)+(j-1)*offset_size*2, mean(C.value_subj(row, :),1), mean(C.sem(C.num_fingers==i & C.sess==j, :),1), 'CapSize', 0, 'Color', colors_blue(n_fing_unique(i),:));
+                    scatter((1:repetitions)+x_offset(k), mean(C.value_subj(row, :),1), 10,'MarkerFaceColor',colors_blue(n_fing_unique(i),:),'MarkerEdgeColor',colors_blue(n_fing_unique(i),:))
+                end
             end
+            box off
+            h = gca;
+            h.YTick = 100:150:600; % RT
+            % h.YTick = 0:1000:3000; % MT
+            % h.YTick = 0.5:1:2.5; % MD
+            h.XTick = 5*(1:length(visits)) - 2;
+            xlabel('visit','FontSize',my_font.xlabel)
+            h.XTickLabel = {'1','2'};
+            h.XAxis.FontSize = my_font.tick_label;
+            h.YAxis.FontSize = my_font.tick_label;
+            ylabel(measure,'FontSize',my_font.ylabel)
+            % ylabel([measure ' [ms]'],'FontSize',my_font.ylabel)
+            % ylim([0.3, 3]) % MD
+            ylim([0, 650]) % RT
+            % ylim([0, 3200]) % MT
+            xlim([0,11])
+            % title('Repetition Effect','FontSize',my_font.title)
+            fontname("Arial")
         end
-        box off
-        h = gca;
-        % h.YTick = 100:150:600; % RT
-        % h.YTick = 0:1000:3000; % MT
-        h.YTick = 0.5:1:2.5; % MD
-        h.XTick = 5*(1:length(visits)) - 2;
-        xlabel('visit','FontSize',my_font.xlabel)
-        h.XTickLabel = {'1','2'};
-        h.XAxis.FontSize = my_font.tick_label;
-        h.YAxis.FontSize = my_font.tick_label;
-        ylabel(measure,'FontSize',my_font.ylabel)
-        % ylabel([measure ' [ms]'],'FontSize',my_font.ylabel)
-        ylim([0.3, 2.8]) % MD
-        % ylim([0, 650]) % RT
-        % ylim([0, 3200]) % MT
-        xlim([0,11])
-        % title('Repetition Effect','FontSize',my_font.title)
-        fontname("Arial")
 
         varargout{1} = C;
 
@@ -1987,7 +1990,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+chord_pattern_avg','n_fing+additive+2fing+chord_pattern_avg'};
+        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+chord_pattern_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
