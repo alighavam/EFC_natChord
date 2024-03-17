@@ -1987,7 +1987,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing'};
+        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+chord_pattern_avg','n_fing+additive+2fing+chord_pattern_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2062,8 +2062,6 @@ switch (what)
             for j = i+1:length(model_names)
                 r2 = C.r(strcmp(C.model,model_names{j}));
                 % paired t-test, one-tail r2>r1:
-                r2
-                r1
                 [t,p] = ttest(r2,r1,1,'paired');
                 tmp.models = {model_names{i},model_names{j}};
                 tmp.t = t;
