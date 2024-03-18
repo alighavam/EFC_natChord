@@ -42,13 +42,13 @@ case 'Load'
  varName = get(he_FastICA_file, 'String');      % The name of the variable to be loaded
  command=['evalin(''base'',''assignin(''''caller'''',''''data'''',' varName ')'')'];
  eval(command,'fprintf(''Variable not found in MATLAB workspace, data not loaded!\n'');data=[];');                          % Variable is copyed to 'data'
- if length (size (data)) > 2,
+ if length (size(data)) > 2
    fprintf (['Input data can not have more than two dimensions, data' ...
 	     ' not loaded.\n']);
    data = [];
  end
 
- if any (any (isnan (data))),
+ if any (any (isnan (data)))
    fprintf ('Input data contains NaN''s, data not loaded.\n');
    data = [];
  end
