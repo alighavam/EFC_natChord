@@ -9,7 +9,6 @@ sess = 1;
 vararginoptions(varargin,{'sn','sess'})
 
 
-
 switch model_name
     case 'n_fing'
         X = zeros(length(chords),5);
