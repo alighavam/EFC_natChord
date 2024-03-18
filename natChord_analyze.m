@@ -56,7 +56,7 @@ switch (what)
                          'natural_window_type',natural_window_type,'wn_spacing',wn_spacing);
         end
     
-    case 'make_all_ dataframe'
+    case 'make_all_dataframe'
         % Calculate RT, MT, MD for each trial of each subejct
         % and create a struct without the mov signals and save it as a
         % single struct called natChord_all.mat
@@ -78,6 +78,12 @@ switch (what)
             mean_dev_tmp = zeros(length(tmp_data.BN),1);
             rt_tmp = zeros(length(tmp_data.BN),1);
             mt_tmp = zeros(size(rt_tmp));
+            force_f1 = zeros(length(tmp_data.BN),1);
+            force_f2 = zeros(length(tmp_data.BN),1);
+            force_f3 = zeros(length(tmp_data.BN),1);
+            force_f4 = zeros(length(tmp_data.BN),1);
+            force_f5 = zeros(length(tmp_data.BN),1);
+
             first_finger_tmp = zeros(size(rt_tmp));
             % loop through trials:
             for j = 1:length(tmp_data.BN)
@@ -93,15 +99,30 @@ switch (what)
                                                                 tmp_data.baselineTopThresh(j), tmp_data.RT(j), ...
                                                                 tmp_data.fGain1(j), tmp_data.fGain2(j), tmp_data.fGain3(j), ...
                                                                 tmp_data.fGain4(j), tmp_data.fGain5(j));
+
+                    % average force:
+                    idx_completion = find(tmp_mov{j}(:,1)==3);
+                    idx_completion = idx_completion(end);
+                    force_f1(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,14));
+                    force_f2(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,15));
+                    force_f3(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,16));
+                    force_f4(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,17));
+                    force_f5(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,18));
                 
                 % if trial was incorrect:
                 else
-                    % mean dev:
+                    force_f1(j) = -1;
+                    force_f2(j) = -1;
+                    force_f3(j) = -1;
+                    force_f4(j) = -1;
+                    force_f5(j) = -1;
+
                     mean_dev_tmp(j) = -1;
                     rt_tmp(j) = -1;
                     mt_tmp(j) = -1;
                     first_finger_tmp(j) = -1;
                 end
+
             end
             
             % removing unnecessary fields:
@@ -116,6 +137,11 @@ switch (what)
 
             sess = (tmp_data.BN<=10) + 2*(tmp_data.BN>=11);
             tmp_data.sess = sess;
+            tmp_data.force_f1 = force_f1;
+            tmp_data.force_f2 = force_f2;
+            tmp_data.force_f3 = force_f3;
+            tmp_data.force_f4 = force_f4;
+            tmp_data.force_f5 = force_f5;
             
             % adding subject data to ANA:
             ANA=addstruct(ANA,tmp_data,'row','force');
@@ -165,6 +191,12 @@ switch (what)
                     tmp.MD_std = std(data.MD(row));
                     tmp.MT_std = std(data.MT(row));
                     tmp.RT_std = std(data.RT(row));
+
+                    tmp.force_f1 = mean(data.force_f1(row));
+                    tmp.force_f2 = mean(data.force_f2(row));
+                    tmp.force_f3 = mean(data.force_f3(row));
+                    tmp.force_f4 = mean(data.force_f4(row));
+                    tmp.force_f5 = mean(data.force_f5(row));
                     
                     tmp.emg_hold_avg_e1 = mean(data.emg_hold_avg_e1(row));
                     tmp.emg_hold_avg_e2 = mean(data.emg_hold_avg_e2(row));
@@ -2459,9 +2491,52 @@ switch (what)
             set(gca,'YDir','reverse')
         end
 
+    case 'EMG_Behavior_relation'
+        
+        % load data:
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        subjects = unique(data.sn);
+        chords = data.chordID(data.sn==1 & data.sess==1);
+
+        for i = 1:length(subjects)
+            sess = unique(data.sess(data.sn==subjects(i)));
+            for j = 1:length(sess)
+                emg = [data.emg_hold_avg_f1(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f2(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f3(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f4(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f5(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_e1(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_e2(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_e3(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_e4(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_e5(data.sn==subjects(i) & data.sess==sess(j))];
+                scales = get_emg_scales(subjects(i),sess(j));
+                scales = [scales(6:10) , scales(1:5)];
+                emg = emg./scales;
+
+                diff_force = [data.force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
+                         data.force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
+                         data.force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
+                         data.force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
+                         data.force_f5(data.sn==subjects(i) & data.sess==sess(j))];
+                force = [diff_force,diff_force];
+                for col = 1:5
+                    force(force(:,col)>0,col) = 0;
+                    force(force(:,col+5)<0,col+5) = 0;
+                end
+                force(:,1:5) = force(:,1:5)*-1;
+
+                description = make_design_matrix(chords,'additive');
+                description = [description(:,6:10),description(:,1:5)];
+                
+            end
+        end
+        
+        
+
     otherwise
         error('The analysis you entered does not exist!')
 end
-
 
 
