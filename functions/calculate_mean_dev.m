@@ -1,12 +1,12 @@
 function mean_dev = calculate_mean_dev(mov, chordID, force_threshold, completion_time, fGain1, fGain2, fGain3, fGain4, fGain5)
 % Description: 
 %       Calculate mean deviation for the trial.
-%
+%       
 %       mean dev: sum from t=1 to T of: norm(F_t - (C' * F_t)/norm(C)^2 . C) / T
 %       where F_t is the force of the 5 fingers at each time point t and C 
 %       is the ideal trajectory that you can take to reach the target
 %       position (Here it is assumed that the ideal trajetory is a straight 
-%       line from the starting position to the ending position). 
+%       line from the starting position to the ending position).
 %
 % INPUTS:
 %       mov: the matrix that contains the mov data of the trial
