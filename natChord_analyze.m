@@ -2492,29 +2492,29 @@ switch (what)
         end
 
     case 'EMG_Behavior_relation'
-        
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         subjects = unique(data.sn);
         chords = data.chordID(data.sn==1 & data.sess==1);
-
+        
+        emg_prewhiten = natChord_analyze('EMG_prewhitening_matrix','normalize_channels',1,'plot_option',0);
+        C = [];
         for i = 1:length(subjects)
             sess = unique(data.sess(data.sn==subjects(i)));
             for j = 1:length(sess)
-                emg = [data.emg_hold_avg_f1(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f2(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f3(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f4(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f5(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e1(data.sn==subjects(i) & data.sess==sess(j)),...
+                emg = [data.emg_hold_avg_e1(data.sn==subjects(i) & data.sess==sess(j)),...
                        data.emg_hold_avg_e2(data.sn==subjects(i) & data.sess==sess(j)),...
                        data.emg_hold_avg_e3(data.sn==subjects(i) & data.sess==sess(j)),...
                        data.emg_hold_avg_e4(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e5(data.sn==subjects(i) & data.sess==sess(j))];
+                       data.emg_hold_avg_e5(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f1(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f2(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f3(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f4(data.sn==subjects(i) & data.sess==sess(j)),...
+                       data.emg_hold_avg_f5(data.sn==subjects(i) & data.sess==sess(j))];
                 scales = get_emg_scales(subjects(i),sess(j));
-                scales = [scales(6:10) , scales(1:5)];
                 emg = emg./scales;
-
+                
                 diff_force = [data.force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
                          data.force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
                          data.force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
@@ -2522,17 +2522,90 @@ switch (what)
                          data.force_f5(data.sn==subjects(i) & data.sess==sess(j))];
                 force = [diff_force,diff_force];
                 for col = 1:5
-                    force(force(:,col)>0,col) = 0;
-                    force(force(:,col+5)<0,col+5) = 0;
+                    force(force(:,col)<0,col) = 0;
+                    force(force(:,col+5)>0,col+5) = 0;
                 end
-                force(:,1:5) = force(:,1:5)*-1;
+                force(:,6:10) = force(:,6:10)*-1;
 
                 description = make_design_matrix(chords,'additive');
-                description = [description(:,6:10),description(:,1:5)];
+
+                % EMG to force linear mixture matrix:
+                W = (emg' * emg)^-1 * emg' * force;
+
+                % force to EMG linear mixture matrix:
+                A = (force' * force)^-1 * force' * emg;
+
+                % EMG to behavior linear mixture matrix:
+                W_b = (emg' * emg)^-1 * emg' * description;
                 
+                % behavior to EMG linear mixture matrix:
+                A_b = (description' * description)^-1 * description' * emg;
+
+                % calculate the R^2 of reconstructed values:
+                force_pred = emg*W;
+                R2_emg2force = 1 - sum((force_pred-force).^2,1) ./ sum(force.^2,1);
+                
+                description_pred = emg*W_b;
+                R2_emg2description = 1 - sum((description_pred-description).^2,1) ./ sum(description.^2,1);
+                
+                emg_pred = force*A;
+                R2_force2emg = 1 - sum((emg_pred-emg).^2,1) ./ sum(emg.^2,1);
+                
+                emg_pred = description*A_b;
+                R2_description2emg = 1 - sum((emg_pred-emg).^2,1) ./ sum(emg.^2,1);
+
+                tmp.sn = subjects(i);
+                tmp.sess = sess(j);
+                tmp.R2_emg2force = mean(R2_emg2force);
+                tmp.R2_emg2description = mean(R2_emg2description);
+                tmp.R2_force2emg = mean(R2_force2emg);
+                tmp.R2_description2emg = mean(R2_description2emg);
+
+                % cross validation with 1-chord out:
+                R2_emg2force_crossval = 0;
+                R2_force2emg_crossval = 0;
+                R2_emg2description_crossval = 0;
+                R2_description2emg_crossval = 0;
+                for ch = 1:length(chords)
+                    emg_reduced = emg(setdiff(1:length(chords),ch),:);
+                    force_reduced = force(setdiff(1:length(chords),ch),:);
+                    description_reduced = description(setdiff(1:length(chords),ch),:);
+                
+                    % EMG to force linear mixture matrix:
+                    W = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * force_reduced;
+                    % force to EMG linear mixture matrix:
+                    A = (force_reduced' * force_reduced)^-1 * force_reduced' * emg_reduced;
+                    % EMG to behavior linear mixture matrix:
+                    W_b = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * description_reduced;
+                    % behavior to EMG linear mixture matrix:
+                    A_b = (description_reduced' * description_reduced)^-1 * description_reduced' * emg_reduced;
+    
+                    % calculate the R^2 for the removed chord:
+                    force_pred = emg(ch,:)*W;
+                    R2_tmp = 1 - sum((force_pred-force(ch,:)).^2) / sum(force(ch,:).^2);
+                    R2_emg2force_crossval = R2_emg2force_crossval + R2_tmp/length(chords);
+
+                    description_pred = emg(ch,:)*W_b;
+                    R2_tmp = 1 - sum((description_pred-description(ch,:)).^2) / sum(description(ch,:).^2);
+                    R2_emg2description_crossval = R2_emg2description_crossval + R2_tmp/length(chords);
+
+                    emg_pred = force(ch,:)*A;
+                    R2_tmp = 1 - sum((emg_pred-emg(ch,:)).^2) ./ sum(emg(ch,:).^2);
+                    R2_force2emg_crossval = R2_force2emg_crossval + R2_tmp/length(chords);
+
+                    emg_pred = description(ch,:)*A_b;
+                    R2_tmp = 1 - sum((emg_pred-emg(ch,:)).^2) ./ sum(emg(ch,:).^2);
+                    R2_description2emg_crossval = R2_description2emg_crossval + R2_tmp/length(chords);
+                end
+                tmp.R2_emg2force_crossval = R2_emg2force_crossval;
+                tmp.R2_emg2description_crossval = R2_emg2description_crossval;
+                tmp.R2_force2emg_crossval = R2_force2emg_crossval;
+                tmp.R2_description2emg_crossval = R2_description2emg_crossval;
+                
+                C = addstruct(C,tmp,'row','force');
             end
         end
-        
+        varargout{1} = C;
         
 
     otherwise
