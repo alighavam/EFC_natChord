@@ -192,6 +192,41 @@ switch model_name
             X(i,:) =  avg_pattern(chordID==chords(i),:);
         end
 
+    case 'force_avg'
+        data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
+        sn_unique = unique(data.sn);
+        sess = [3,4];
+
+        % calculate group avg:
+        avg_force = 0;
+        for i = 1:length(sn_unique)
+            % getting the subject session average:
+            tmp_force = 0;
+            for j = 1:length(sess)
+                diff_force = [data.force_f1(data.sn==sn_unique(i) & data.sess==sess(j)),...
+                              data.force_f2(data.sn==sn_unique(i) & data.sess==sess(j)),...
+                              data.force_f3(data.sn==sn_unique(i) & data.sess==sess(j)),...
+                              data.force_f4(data.sn==sn_unique(i) & data.sess==sess(j)),...
+                              data.force_f5(data.sn==sn_unique(i) & data.sess==sess(j))];
+                force = [diff_force,diff_force];
+                for col = 1:5
+                    force(force(:,col)<0,col) = 0;
+                    force(force(:,col+5)>0,col+5) = 0;
+                end
+                force(:,6:10) = force(:,6:10)*-1;
+
+                tmp_force = tmp_force + force/length(sess);
+            end
+
+            avg_force = avg_force + tmp_force/length(sn_unique);
+        end
+        chordID = data.chordID(data.sn==1 & data.sess==4);
+        
+        % making the design matrix:
+        X = zeros(length(chords),10);
+        for i = 1:length(chords)
+            X(i,:) =  avg_force(chordID==chords(i),:);
+        end
 
     otherwise
         names = strsplit(model_name,'+');
