@@ -2606,7 +2606,46 @@ switch (what)
             end
         end
         varargout{1} = C;
-        
+
+        % PLOT:
+        fig = figure('Position', [500 500 300 300]);
+        fontsize(fig, my_font.tick_label, 'points')
+        lim_width = 0.3;
+        point_size = 70;
+        hold on;
+        drawline(mean(C.R2_emg2force),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        drawline(mean(C.R2_force2emg),'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        x1 = 1+randn(1,length(C.R2_emg2force_crossval))/10;
+        y1 = C.R2_emg2force_crossval;
+        x2 = 2+randn(1,length(C.R2_force2emg_crossval))/10;
+        y2 = C.R2_force2emg_crossval;
+        for i = 1:length(x1)
+            plot([x1(i) x2(i)],[y1(i) y2(i)],'color',[0.7 0.7 0.7]);
+        end
+        scatter(x1,y1,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
+        scatter(x2,y2,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
+
+        lim_width = 0.3;
+        hold on;
+        drawline(mean(C.R2_emg2description),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        drawline(mean(C.R2_description2emg),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        x1 = 4+randn(1,length(C.R2_emg2description_crossval))/10;
+        y1 = C.R2_emg2description_crossval;
+        x2 = 5+randn(1,length(C.R2_description2emg_crossval))/10;
+        y2 = C.R2_description2emg_crossval;
+        for i = 1:length(x1)
+            plot([x1(i) x2(i)],[y1(i) y2(i)],'color',[0.7 0.7 0.7]);
+        end
+        scatter(x1,y1,50,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
+        scatter(x2,y2,50,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
+
+        drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
+        ylim([0,1.1])
+        xlim([0,6])
+        h = gca;
+        h.XTick = [1,2,4,5];
+        h.XTickLabels = {'emg to force','force to emg','emg to direction','direction to emg'};
+        ylabel('cross-val $R^2$','Interpreter','latex')
 
     otherwise
         error('The analysis you entered does not exist!')
