@@ -78,11 +78,22 @@ switch (what)
             mean_dev_tmp = zeros(length(tmp_data.BN),1);
             rt_tmp = zeros(length(tmp_data.BN),1);
             mt_tmp = zeros(size(rt_tmp));
+            diff_force_f1 = zeros(length(tmp_data.BN),1);
+            diff_force_f2 = zeros(length(tmp_data.BN),1);
+            diff_force_f3 = zeros(length(tmp_data.BN),1);
+            diff_force_f4 = zeros(length(tmp_data.BN),1);
+            diff_force_f5 = zeros(length(tmp_data.BN),1);
+
             force_f1 = zeros(length(tmp_data.BN),1);
             force_f2 = zeros(length(tmp_data.BN),1);
             force_f3 = zeros(length(tmp_data.BN),1);
             force_f4 = zeros(length(tmp_data.BN),1);
             force_f5 = zeros(length(tmp_data.BN),1);
+            force_e1 = zeros(length(tmp_data.BN),1);
+            force_e2 = zeros(length(tmp_data.BN),1);
+            force_e3 = zeros(length(tmp_data.BN),1);
+            force_e4 = zeros(length(tmp_data.BN),1);
+            force_e5 = zeros(length(tmp_data.BN),1);
 
             first_finger_tmp = zeros(size(rt_tmp));
             % loop through trials:
@@ -103,19 +114,41 @@ switch (what)
                     % average force:
                     idx_completion = find(tmp_mov{j}(:,1)==3);
                     idx_completion = idx_completion(end);
-                    force_f1(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,14));
-                    force_f2(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,15));
-                    force_f3(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,16));
-                    force_f4(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,17));
-                    force_f5(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,18));
+                    diff_force_f1(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,14));
+                    diff_force_f2(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,15));
+                    diff_force_f3(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,16));
+                    diff_force_f4(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,17));
+                    diff_force_f5(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,18));
+
+                    force_f1(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,9));
+                    force_f2(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,10));
+                    force_f3(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,11));
+                    force_f4(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,12));
+                    force_f5(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,13));
+                    force_e1(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,4));
+                    force_e2(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,5));
+                    force_e3(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,6));
+                    force_e4(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,7));
+                    force_e5(j) = mean(tmp_mov{j}(idx_completion-299:idx_completion,8));
                 
                 % if trial was incorrect:
                 else
+                    diff_force_f1(j) = -1;
+                    diff_force_f2(j) = -1;
+                    diff_force_f3(j) = -1;
+                    diff_force_f4(j) = -1;
+                    diff_force_f5(j) = -1;
+
                     force_f1(j) = -1;
                     force_f2(j) = -1;
                     force_f3(j) = -1;
                     force_f4(j) = -1;
                     force_f5(j) = -1;
+                    force_e1(j) = -1;
+                    force_e2(j) = -1;
+                    force_e3(j) = -1;
+                    force_e4(j) = -1;
+                    force_e5(j) = -1;
 
                     mean_dev_tmp(j) = -1;
                     rt_tmp(j) = -1;
@@ -137,11 +170,22 @@ switch (what)
 
             sess = (tmp_data.BN<=10) + 2*(tmp_data.BN>=11);
             tmp_data.sess = sess;
+            tmp_data.diff_force_f1 = diff_force_f1;
+            tmp_data.diff_force_f2 = diff_force_f2;
+            tmp_data.diff_force_f3 = diff_force_f3;
+            tmp_data.diff_force_f4 = diff_force_f4;
+            tmp_data.diff_force_f5 = diff_force_f5;
+
             tmp_data.force_f1 = force_f1;
             tmp_data.force_f2 = force_f2;
             tmp_data.force_f3 = force_f3;
             tmp_data.force_f4 = force_f4;
             tmp_data.force_f5 = force_f5;
+            tmp_data.force_e1 = force_e1;
+            tmp_data.force_e2 = force_e2;
+            tmp_data.force_e3 = force_e3;
+            tmp_data.force_e4 = force_e4;
+            tmp_data.force_e5 = force_e5;
             
             % adding subject data to ANA:
             ANA=addstruct(ANA,tmp_data,'row','force');
@@ -192,11 +236,22 @@ switch (what)
                     tmp.MT_std = std(data.MT(row));
                     tmp.RT_std = std(data.RT(row));
 
+                    tmp.diff_force_f1 = mean(data.diff_force_f1(row));
+                    tmp.diff_force_f2 = mean(data.diff_force_f2(row));
+                    tmp.diff_force_f3 = mean(data.diff_force_f3(row));
+                    tmp.diff_force_f4 = mean(data.diff_force_f4(row));
+                    tmp.diff_force_f5 = mean(data.diff_force_f5(row));
+
                     tmp.force_f1 = mean(data.force_f1(row));
                     tmp.force_f2 = mean(data.force_f2(row));
                     tmp.force_f3 = mean(data.force_f3(row));
                     tmp.force_f4 = mean(data.force_f4(row));
                     tmp.force_f5 = mean(data.force_f5(row));
+                    tmp.force_e1 = mean(data.force_e1(row));
+                    tmp.force_e2 = mean(data.force_e2(row));
+                    tmp.force_e3 = mean(data.force_e3(row));
+                    tmp.force_e4 = mean(data.force_e4(row));
+                    tmp.force_e5 = mean(data.force_e5(row));
                     
                     tmp.emg_hold_avg_e1 = mean(data.emg_hold_avg_e1(row));
                     tmp.emg_hold_avg_e2 = mean(data.emg_hold_avg_e2(row));
@@ -2491,13 +2546,12 @@ switch (what)
             set(gca,'YDir','reverse')
         end
 
-    case 'EMG_Behavior_relation'
+    case 'emg_force_transform'
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         subjects = unique(data.sn);
         chords = data.chordID(data.sn==1 & data.sess==1);
         
-        emg_prewhiten = natChord_analyze('EMG_prewhitening_matrix','normalize_channels',1,'plot_option',0);
         C = [];
         for i = 1:length(subjects)
             sess = unique(data.sess(data.sn==subjects(i)));
@@ -2515,17 +2569,29 @@ switch (what)
                 scales = get_emg_scales(subjects(i),sess(j));
                 emg = emg./scales;
                 
-                diff_force = [data.force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
-                         data.force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
-                         data.force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
-                         data.force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
-                         data.force_f5(data.sn==subjects(i) & data.sess==sess(j))];
+                diff_force = [data.diff_force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
+                              data.diff_force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
+                              data.diff_force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
+                              data.diff_force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
+                              data.diff_force_f5(data.sn==subjects(i) & data.sess==sess(j))];
                 force = [diff_force,diff_force];
                 for col = 1:5
                     force(force(:,col)<0,col) = 0;
                     force(force(:,col+5)>0,col+5) = 0;
                 end
                 force(:,6:10) = force(:,6:10)*-1;
+                % force = diff_force;
+
+                % force = [data.force_e1(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_e2(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_e3(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_e4(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_e5(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
+                %          data.force_f5(data.sn==subjects(i) & data.sess==sess(j))];
 
                 description = make_design_matrix(chords,'additive');
 
@@ -2606,12 +2672,19 @@ switch (what)
             end
         end
         varargout{1} = C;
+        
+        % significant tests:
+        [t,p] = ttest(C.R2_force2emg_crossval,C.R2_emg2force_crossval,1,'paired');
+        fprintf('test if force2emg > emg2force: %.4f\n',p)
+        [t,p] = ttest(C.R2_description2emg_crossval,C.R2_emg2description_crossval,1,'paired');
+        fprintf('test if direction2emg > emg2direction: %.4f\n',p)
+
 
         % PLOT:
         fig = figure('Position', [500 500 300 300]);
         fontsize(fig, my_font.tick_label, 'points')
         lim_width = 0.3;
-        point_size = 70;
+        point_size = 60;
         hold on;
         drawline(mean(C.R2_emg2force),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
         drawline(mean(C.R2_force2emg),'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
@@ -2636,11 +2709,11 @@ switch (what)
         for i = 1:length(x1)
             plot([x1(i) x2(i)],[y1(i) y2(i)],'color',[0.7 0.7 0.7]);
         end
-        scatter(x1,y1,50,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
-        scatter(x2,y2,50,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
+        scatter(x1,y1,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
+        scatter(x2,y2,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
 
         drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        ylim([0,1.1])
+        ylim([-0.2,1.1])
         xlim([0,6])
         h = gca;
         h.XTick = [1,2,4,5];
