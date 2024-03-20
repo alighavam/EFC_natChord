@@ -64,7 +64,7 @@ switch model_name
         for j = 1:size(X1,2)-1
             for k = j+1:size(X1,2)
                 if (k ~= j+5)
-                    X = [X, X1(:,j).*X1(:,k)]; 
+                    X = [X, X1(:,j).*X1(:,k)];
                 end
             end
         end
@@ -178,7 +178,7 @@ switch model_name
             X(i,1) =  avg_magnitude(out_chordID==chords(i));
         end
 
-    case 'chord_pattern_avg'
+    case 'emg_additive_avg'
         C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
         % calculate group avg:
         avg_pattern = 0;
@@ -191,6 +191,31 @@ switch model_name
         for i = 1:length(chords)
             X(i,:) =  avg_pattern(chordID==chords(i),:);
         end
+    
+    case 'emg_2channel_avg'
+        C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
+        % calculate group avg:
+        avg_pattern = 0;
+        for i = 1:length(C.pattern)
+            avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
+        end
+        chordID = C.chordID;
+        % making the design matrix:
+        X = zeros(length(chords),10);
+        for i = 1:length(chords)
+            X(i,:) =  avg_pattern(chordID==chords(i),:);
+        end
+        
+        X = [];
+        X1 = make_design_matrix(chords,'additive');
+        for j = 1:size(X1,2)-1
+            for k = j+1:size(X1,2)
+                if (k ~= j+5)
+                    X = [X, X1(:,j).*X1(:,k)];
+                end
+            end
+        end
+        
 
     case 'force_avg'
         data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
