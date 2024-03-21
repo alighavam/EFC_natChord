@@ -179,13 +179,24 @@ switch model_name
         end
 
     case 'emg_additive_avg'
-        C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
+        data = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        subj = unique(data.sn);
+        
         % calculate group avg:
         avg_pattern = 0;
-        for i = 1:length(C.pattern)
-            avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
+        for i = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(i)));
+            tmp_avg = 0;
+            for j = 1:length(sess)
+                row = data.sn==subj(i) & data.sess==sess(j);
+                tmp_pattern = [data.emg_e1(row),data.emg_e2(row),data.emg_e3(row),data.emg_e4(row),data.emg_e5(row),...
+                               data.emg_f1(row),data.emg_f2(row),data.emg_f3(row),data.emg_f4(row),data.emg_f5(row)];
+                tmp_avg = tmp_avg + tmp_pattern/length(sess);
+            end
+            avg_pattern = avg_pattern + tmp_avg/length(subj);
         end
-        chordID = C.chordID;
+        chordID = data.chordID(data.sn==1 & data.sess==1);
+
         % making the design matrix:
         X = zeros(length(chords),10);
         for i = 1:length(chords)
@@ -193,19 +204,6 @@ switch model_name
         end
     
     case 'emg_2channel_avg'
-        % C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
-        % % calculate group avg:
-        % avg_pattern = 0;
-        % for i = 1:length(C.pattern)
-        %     avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
-        % end
-        % chordID = C.chordID;
-        % % making the design matrix:
-        % X = zeros(length(chords),10);
-        % for i = 1:length(chords)
-        %     X(i,:) =  avg_pattern(chordID==chords(i),:);
-        % end
-        
         X = [];
         X1 = make_design_matrix(chords,'emg_additive_avg');
         for j = 1:size(X1,2)-1
@@ -216,6 +214,39 @@ switch model_name
             end
         end
         
+        % data = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        % subj = unique(data.sn);
+        % 
+        % % calculate group avg interac:
+        % interac_avg = 0;
+        % for i = 1:length(subj)
+        %     sess = unique(data.sess(data.sn==subj(i)));
+        %     tmp_interac_avg = 0;
+        %     for j = 1:length(sess)
+        % 
+        %         row = data.sn==subj(i) & data.sess==sess(j);
+        %         tmp_pattern = [data.emg_e1(row),data.emg_e2(row),data.emg_e3(row),data.emg_e4(row),data.emg_e5(row),...
+        %                        data.emg_f1(row),data.emg_f2(row),data.emg_f3(row),data.emg_f4(row),data.emg_f5(row)];
+        % 
+        %         sess_interac = [];
+        %         for i1 = 1:size(tmp_pattern,2)-1
+        %             for k = i1+1:size(tmp_pattern,2)
+        %                 if (k ~= i1+5)
+        %                     sess_interac = [sess_interac, tmp_pattern(:,i1).*tmp_pattern(:,k)];
+        %                 end
+        %             end
+        %         end
+        %         tmp_interac_avg = tmp_interac_avg + sess_interac/length(sess);
+        %     end
+        %     interac_avg = interac_avg + tmp_interac_avg/length(subj);
+        % end
+        % chordID = data.chordID(data.sn==1 & data.sess==1);
+        % 
+        % % making the design matrix:
+        % X = zeros(size(interac_avg));
+        % for i = 1:length(chords)
+        %     X(i,:) =  interac_avg(chordID==chords(i),:);
+        % end
 
     case 'force_avg'
         data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
