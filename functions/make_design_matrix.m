@@ -193,21 +193,21 @@ switch model_name
         end
     
     case 'emg_2channel_avg'
-        C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
-        % calculate group avg:
-        avg_pattern = 0;
-        for i = 1:length(C.pattern)
-            avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
-        end
-        chordID = C.chordID;
-        % making the design matrix:
-        X = zeros(length(chords),10);
-        for i = 1:length(chords)
-            X(i,:) =  avg_pattern(chordID==chords(i),:);
-        end
+        % C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
+        % % calculate group avg:
+        % avg_pattern = 0;
+        % for i = 1:length(C.pattern)
+        %     avg_pattern = avg_pattern + C.pattern{i}/length(C.pattern);
+        % end
+        % chordID = C.chordID;
+        % % making the design matrix:
+        % X = zeros(length(chords),10);
+        % for i = 1:length(chords)
+        %     X(i,:) =  avg_pattern(chordID==chords(i),:);
+        % end
         
         X = [];
-        X1 = make_design_matrix(chords,'additive');
+        X1 = make_design_matrix(chords,'emg_additive_avg');
         for j = 1:size(X1,2)-1
             for k = j+1:size(X1,2)
                 if (k ~= j+5)
