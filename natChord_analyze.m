@@ -327,7 +327,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4,7,15]'];
+        subject_mapping = [subjects , [1,5,2,4,7,15,11]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -384,7 +384,7 @@ switch (what)
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
             for i = 1:length(subject_name)        
-                sess = unique(data.sess(data.sn==str2double(subject_name(end-1:end))));
+                sess = unique(data.sess(data.sn==str2double(subject_name{i}(end-1:end))));
                 sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
 
                 % Preprocessing and dealing with the natural EMGs:
@@ -1258,7 +1258,7 @@ switch (what)
                     % 5f chord:
                     scatter_corr(C.log_slope(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5), C.MD(C.sn==subjects(sn) & C.sess==i & C.num_fingers==5), 'k', 'o')
 
-                    title(sprintf('subj%d  , sess %d',sn,i),'FontSize',my_font.title)
+                    title(sprintf('subj%d  , sess %d',subjects(sn),i),'FontSize',my_font.title)
                     xlabel('log(Slope (n/d))','FontSize',my_font.xlabel)
                     ylabel('MD','FontSize',my_font.ylabel)
                     % xlim([-5,25])
@@ -1271,7 +1271,7 @@ switch (what)
                     figure;
                     hold on
                     scatter_corr(C.log_slope_n(C.sn==subjects(sn) & C.sess==i), C.MD_n(C.sn==subjects(sn) & C.sess==i), 'k', 'o')
-                    title(sprintf('subj%d  , sess %d',sn,i),'FontSize',my_font.title)
+                    title(sprintf('subj%d  , sess %d',subjects(sn),i),'FontSize',my_font.title)
                     xlabel('log(Slope (n/d)) , n regressed out','FontSize',my_font.xlabel)
                     ylabel('MD , n regressed out','FontSize',my_font.ylabel)
                     xlim([-13,13])
@@ -2077,7 +2077,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+chord_pattern_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+chord_pattern_avg'};
+        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+emg_additive_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+emg_additive_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
