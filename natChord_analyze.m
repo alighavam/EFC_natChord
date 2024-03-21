@@ -353,11 +353,84 @@ switch (what)
         data.log_slope = C.log_slope;
         data.log_slope_n = C.log_slope_n;
         data.d = C.d;
-
+        
         % magnitude model:
         [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
         data.magnitude = out.mag;
         data.magnitude_n = out.mag_n;
+
+        % emg channel values:
+        C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
+        subj = unique(C.sn);
+        emg_f1 = [];
+        emg_f2 = [];
+        emg_f3 = [];
+        emg_f4 = [];
+        emg_f5 = [];
+        emg_e1 = [];
+        emg_e2 = [];
+        emg_e3 = [];
+        emg_e4 = [];
+        emg_e5 = [];
+        emg_f1_pw = [];
+        emg_f2_pw = [];
+        emg_f3_pw = [];
+        emg_f4_pw = [];
+        emg_f5_pw = [];
+        emg_e1_pw = [];
+        emg_e2_pw = [];
+        emg_e3_pw = [];
+        emg_e4_pw = [];
+        emg_e5_pw = [];
+        for i = 1:length(subj)
+            sess = unique(C.sess(C.sn==subj(i)));
+            for j = 1:length(sess)
+                emg_patterns = C.pattern{C.sn==subj(i) & C.sess==sess(j)};
+                emg_patterns_pw = C.pattern_prewhitened{C.sn==subj(i) & C.sess==sess(j)};
+                
+                emg_f1 = [emg_f1 ; emg_patterns(:,6)];
+                emg_f2 = [emg_f2 ; emg_patterns(:,7)];
+                emg_f3 = [emg_f3 ; emg_patterns(:,8)];
+                emg_f4 = [emg_f4 ; emg_patterns(:,9)];
+                emg_f5 = [emg_f5 ; emg_patterns(:,10)];
+                emg_e1 = [emg_e1 ; emg_patterns(:,1)];
+                emg_e2 = [emg_e2 ; emg_patterns(:,2)];
+                emg_e3 = [emg_e3 ; emg_patterns(:,3)];
+                emg_e4 = [emg_e4 ; emg_patterns(:,4)];
+                emg_e5 = [emg_e5 ; emg_patterns(:,5)];
+                emg_f1_pw = [emg_f1_pw ; emg_patterns_pw(:,6)];
+                emg_f2_pw = [emg_f2_pw ; emg_patterns_pw(:,7)];
+                emg_f3_pw = [emg_f3_pw ; emg_patterns_pw(:,8)];
+                emg_f4_pw = [emg_f4_pw ; emg_patterns_pw(:,9)];
+                emg_f5_pw = [emg_f5_pw ; emg_patterns_pw(:,10)];
+                emg_e1_pw = [emg_e1_pw ; emg_patterns_pw(:,1)];
+                emg_e2_pw = [emg_e2_pw ; emg_patterns_pw(:,2)];
+                emg_e3_pw = [emg_e3_pw ; emg_patterns_pw(:,3)];
+                emg_e4_pw = [emg_e4_pw ; emg_patterns_pw(:,4)];
+                emg_e5_pw = [emg_e5_pw ; emg_patterns_pw(:,5)];
+            end
+        end
+        data.emg_f1 = emg_f1;
+        data.emg_f2 = emg_f2;
+        data.emg_f3 = emg_f3;
+        data.emg_f4 = emg_f4;
+        data.emg_f5 = emg_f5;
+        data.emg_e1 = emg_e1;
+        data.emg_e2 = emg_e2;
+        data.emg_e3 = emg_e3;
+        data.emg_e4 = emg_e4;
+        data.emg_e5 = emg_e5;
+
+        data.emg_f1_pw = emg_f1_pw;
+        data.emg_f2_pw = emg_f2_pw;
+        data.emg_f3_pw = emg_f3_pw;
+        data.emg_f4_pw = emg_f4_pw;
+        data.emg_f5_pw = emg_f5_pw;
+        data.emg_e1_pw = emg_e1_pw;
+        data.emg_e2_pw = emg_e2_pw;
+        data.emg_e3_pw = emg_e3_pw;
+        data.emg_e4_pw = emg_e4_pw;
+        data.emg_e5_pw = emg_e5_pw;
         
         dsave(fullfile(project_path,'analysis','natChord_analysis.tsv'),data);
 
@@ -2077,7 +2150,7 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing','n_fing+additive','n_fing+additive+magnitude_avg','n_fing+additive+magnitude_avg+nSphere_avg','n_fing+additive+emg_additive_avg','n_fing+additive+2fing_adj','n_fing+additive+2fing','n_fing+additive+2fing+emg_additive_avg'};
+        model_names = {'additive','emg_additive_avg','additive+2fing','emg_additive_avg+emg_2channel_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
