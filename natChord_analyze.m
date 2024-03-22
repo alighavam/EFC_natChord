@@ -2895,7 +2895,19 @@ switch (what)
             prefix = [winning_model , '+'];
             models = cellfun(@(x) [prefix x], models, 'UniformOutput', false);
         end
-        fprintf('The winner of forward selection is:\n%s\n',winning_model);
+        
+        % fing the significant winner:
+        significant_winner = '';
+        significant_steps = zeros(length(unique(C.step)),1);
+        for i = 1:length(unique(C.step))
+            significant = C.significant(C.step==i);
+            if sum(significant)
+                
+            end
+        end
+
+        fprintf('\nThe significant winner of the forward selection is:\n%s',actual_winner)
+        fprintf('\nThe r_avg winner of forward selection is:\n%s\n',winning_model);
         varargout{1} = C;
 
     otherwise
