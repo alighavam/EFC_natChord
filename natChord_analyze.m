@@ -2902,14 +2902,160 @@ switch (what)
         for i = 1:length(unique(C.step))
             significant = C.significant(C.step==i);
             if sum(significant)
-                
+                significant_steps(i) = 1;
             end
         end
+        idx = find(significant_steps);
+        idx = idx(end);
+        significant_winner = C.model{C.step==idx & C.win==1};
 
-        fprintf('\nThe significant winner of the forward selection is:\n%s',actual_winner)
+        fprintf('\nThe significant winner of the forward selection is:\n%s\n',significant_winner)
         fprintf('\nThe r_avg winner of forward selection is:\n%s\n',winning_model);
         varargout{1} = C;
 
+    case 'backward_selection'
+        % handling input arguments:
+        alpha = 0.05;
+        measure = 'MD';
+        sess = [3,4];
+        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg'};
+        vararginoptions(varargin,{'alpha','measure','models','sess'})
+        base_models = models;
+        
+        % loading data:
+        chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords_natChord = chords_natChord.chordID(chords_natChord.sn==1 & chords_natChord.sess==1);
+        data = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
+        data = getrow(data,ismember(data.chordID,chords_natChord));
+        chords = data.chordID(data.sn==1 & data.sess==1);
+        subj = unique(data.sn);
+        
+        % getting the values of measure:
+        values_tmp = eval(['data.' measure]);
+        
+        % getting the average of sessions for every subj:
+        values = zeros(length(chords),length(subj));
+        for i = 1:length(subj)
+            % avg with considering nan values since subjects might have
+            % missed all 5 repetitions in one session:
+            values(:,i) = mean([values_tmp(data.sess==sess(1) & data.sn==subj(i)),values_tmp(data.sess==sess(2) & data.sn==subj(i))],2,'omitmissing');
+        end
+        
+        % full model:
+        for i = 1:length(base_models)
+            full_model = strjoin(base_models, '+');
+        end
+        
+        best_r = zeros(length(subj),1);
+        % loop on subjects and regression with leave-one-out:
+        for sn = 1:length(subj)
+            % values of 'in' subjects, Nx1 vector:
+            y_train = values(:,setdiff(1:length(subj),sn));
+            y_train = mean(y_train,2);
+
+            % avg of 'out' subject:
+            y_test = values(:,sn);
+
+            % getting design matrix for model:
+            X = make_design_matrix(chords,full_model);
+
+            % training the model:
+            % [B,STATS] = linregress(y_train,X,'intercept',0);
+            [B,~] = svd_linregress(y_train,X);
+
+            % testing the model:
+            X_test = make_design_matrix(chords,full_model);
+            y_pred = X_test * B;
+            best_r(sn) = corr(y_pred,y_test);
+        end
+        
+        % selection steps:
+        steps = length(models)-1;
+
+        % define models for the first step:
+        winning_model = full_model;
+        
+        for i = 1:length(steps)
+            % define models to be removed for the current step:
+            reduce_models = strsplit(winning_model,'+');
+            
+            for j = 1:length(reduce_models)
+                model = reduce_models;
+                model(strcmp(model,reduce_models{j})) = [];
+                model = strjoin(model,'+');
+
+                r = zeros(length(subj),1);
+                % loop on subjects and regression with leave-one-out:
+                for sn = 1:length(subj)
+                    % values of 'in' subjects, Nx1 vector:
+                    y_train = values(:,setdiff(1:length(subj),sn));
+                    y_train = mean(y_train,2);
+        
+                    % avg of 'out' subject:
+                    y_test = values(:,sn);
+
+                    % getting design matrix for model:
+                    X = make_design_matrix(chords,model);
+    
+                    % training the model:
+                    % [B,STATS] = linregress(y_train,X,'intercept',0);
+                    [B,~] = svd_linregress(y_train,X);
+    
+                    % testing the model:
+                    X_test = make_design_matrix(chords,model);
+                    y_pred = X_test * B;
+                    r(sn) = corr(y_pred,y_test);
+                end
+                tmp.step = i;
+                tmp.model = {model};
+                tmp.r = {r};
+                tmp.r_avg = mean(r);
+                [~,tmp.pval] = ttest(best_r,r,1,'paired');
+                tmp.significant = tmp.pval < alpha; % this is 1 if the reduced model is significantly worse than the starting model
+
+                if tmp.significant == 0
+                    tmp.fail = 1;   % the reduced model fails if it does not significantly reduce performance
+                end
+                
+                % save values in struct:
+                C = addstruct(C,tmp,'row','force');
+            end
+
+            % conclude the step and choose a winning model for the next step:
+            r_avg = C.r_avg(C.step==i);
+            fail = C.fail(C.step==i);
+            
+            % if there was at least one significantly worse model:
+            if sum(fail) ~= length(fail)
+                % remove the good models from the competition
+                r_avg(fail==0) = 0;
+            end
+            
+            % sort the reduction of performance after removing each model:
+            [~,idx] = sort(mean(best_r)-r_avg);
+
+            % remove the most unimportant model:
+            reduce_models(idx(1)) = [];
+
+            % conclude the not-loser(winner?) and give it a gold medal:
+            winning_model = strjoin(reduce_models,'+');
+            C.win(C.step==i & strcmp(C.model,winning_model)) = 1;
+            % set the competition values for the next step:
+            best_r = C.r{C.step==i & strcmp(C.model,winning_model)};
+
+            % make models for the next step:
+            models = base_models;
+            split_names = strsplit(winning_model,'+');
+            for j = 1:length(split_names)
+                models(strcmp(models,split_names{j})) = [];
+            end
+            prefix = [winning_model , '+'];
+            models = cellfun(@(x) [prefix x], models, 'UniformOutput', false);
+
+        end
+
+        
+        
     otherwise
         error('The analysis you entered does not exist!')
 end
