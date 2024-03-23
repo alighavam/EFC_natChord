@@ -3034,11 +3034,9 @@ switch (what)
             % sort the reduction of performance after removing each model:
             [~,idx] = sort(mean(best_r)-r_avg);
 
-            % remove the most unimportant model:
-            reduce_models(idx(1)) = [];
-
             % conclude the not-loser(winner?) and give it a gold medal:
-            winning_model = strjoin(reduce_models,'+');
+            tmp_models = C.model{C.step==i};
+            winning_model = tmp_models{};
             C.win(C.step==i & strcmp(C.model,winning_model)) = 1;
             % set the competition values for the next step:
             best_r = C.r{C.step==i & strcmp(C.model,winning_model)};
