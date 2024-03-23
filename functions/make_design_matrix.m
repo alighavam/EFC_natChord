@@ -257,7 +257,7 @@ switch model_name
         avg_force = 0;
         for i = 1:length(sn_unique)
             % getting the subject session average:
-            tmp_force = 0;
+            tmp_force = [];
             for j = 1:length(sess)
                 diff_force = [data.force_f1(data.sn==sn_unique(i) & data.sess==sess(j)),...
                               data.force_f2(data.sn==sn_unique(i) & data.sess==sess(j)),...
@@ -271,8 +271,14 @@ switch model_name
                 end
                 force(:,6:10) = force(:,6:10)*-1;
 
-                tmp_force = tmp_force + force/length(sess);
+                % if sum(isnan(force)) ~= 0
+                %     fprintf('subject %d, sess %d contains nan \n',sn_unique(i),sess(j))
+                % end
+
+                % tmp_force = tmp_force + force/length(sess);
+                tmp_force = cat(3,tmp_force,force);
             end
+            tmp_force = sum(tmp_force,3,'omitnan')/length(sess);
 
             avg_force = avg_force + tmp_force/length(sn_unique);
         end
@@ -282,6 +288,17 @@ switch model_name
         X = zeros(length(chords),10);
         for i = 1:length(chords)
             X(i,:) =  avg_force(chordID==chords(i),:);
+        end
+
+    case 'force_2fing'
+        X = [];
+        X1 = make_design_matrix(chords,'force_avg');
+        for j = 1:size(X1,2)-1
+            for k = j+1:size(X1,2)
+                if (k ~= j+5)
+                    X = [X, X1(:,j).*X1(:,k)];
+                end
+            end
         end
 
     otherwise
