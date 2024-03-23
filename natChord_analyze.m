@@ -2917,7 +2917,7 @@ switch (what)
         alpha = 0.05;
         measure = 'MD';
         sess = [3,4];
-        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg'};
+        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg','force_2fing'};
         vararginoptions(varargin,{'alpha','measure','models','sess'})
         base_models = models;
         
@@ -2975,7 +2975,7 @@ switch (what)
         winning_model = full_model;
         
         C = [];
-        for i = 1:length(steps)
+        for i = 1:steps
             % define models to be removed for the current step:
             reduce_models = strsplit(winning_model,'+');
             
