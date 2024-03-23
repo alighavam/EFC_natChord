@@ -2897,7 +2897,6 @@ switch (what)
         end
         
         % fing the significant winner:
-        significant_winner = '';
         significant_steps = zeros(length(unique(C.step)),1);
         for i = 1:length(unique(C.step))
             significant = C.significant(C.step==i);
