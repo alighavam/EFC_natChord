@@ -2150,6 +2150,8 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
+        noise_ceil = 0.8691;
+        % noise_ceil = 0.2333;
         model_names = {'additive','emg_additive_avg','additive+2fing','emg_additive_avg+emg_2channel_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
@@ -2243,8 +2245,6 @@ switch (what)
         % else
         %     noise_ceil = mean(corr_struct.RT);
         % end
-        noise_ceil = 0.8591;
-        % noise_ceil = 0.2536;
 
         for i = 1:length(model_names)
             r = C.r(strcmp(C.model,model_names{i}));
@@ -2798,7 +2798,7 @@ switch (what)
         alpha = 0.05;
         measure = 'MD';
         sess = [3,4];
-        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg'};
+        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg','force_2fing'};
         vararginoptions(varargin,{'alpha','measure','models','sess'})
         base_models = models;
         
@@ -2918,7 +2918,7 @@ switch (what)
         alpha = 0.05;
         measure = 'MD';
         sess = [3,4];
-        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg'};
+        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg'};
         vararginoptions(varargin,{'alpha','measure','models','sess'})
         base_models = models;
         
@@ -2975,6 +2975,7 @@ switch (what)
         % define models for the first step:
         winning_model = full_model;
         
+        C = [];
         for i = 1:length(steps)
             % define models to be removed for the current step:
             reduce_models = strsplit(winning_model,'+');
@@ -3011,9 +3012,10 @@ switch (what)
                 tmp.r = {r};
                 tmp.r_avg = mean(r);
                 [~,tmp.pval] = ttest(best_r,r,1,'paired');
-                tmp.significant = tmp.pval < alpha; % this is 1 if the reduced model is significantly worse than the starting model
+                tmp.significantly_worse = tmp.pval < alpha; % this is 1 if the reduced model is significantly worse than the starting model
+                tmp.win = 0;
 
-                if tmp.significant == 0
+                if tmp.significantly_worse == 0
                     tmp.fail = 1;   % the reduced model fails if it does not significantly reduce performance
                 end
                 
@@ -3035,23 +3037,30 @@ switch (what)
             [~,idx] = sort(mean(best_r)-r_avg);
 
             % conclude the not-loser(winner?) and give it a gold medal:
-            tmp_models = C.model{C.step==i};
-            winning_model = tmp_models{};
+            tmp_models = C.model(C.step==i);
+            winning_model = tmp_models{idx(1)};
             C.win(C.step==i & strcmp(C.model,winning_model)) = 1;
+            
             % set the competition values for the next step:
             best_r = C.r{C.step==i & strcmp(C.model,winning_model)};
-
-            % make models for the next step:
-            models = base_models;
-            split_names = strsplit(winning_model,'+');
-            for j = 1:length(split_names)
-                models(strcmp(models,split_names{j})) = [];
-            end
-            prefix = [winning_model , '+'];
-            models = cellfun(@(x) [prefix x], models, 'UniformOutput', false);
-
         end
-
+        
+        % find the significant winner:
+        % significant_winner = '';
+        % significant_steps = zeros(length(unique(C.step)),1);
+        % for i = 1:length(unique(C.step))
+        %     significant = C.significant(C.step==i);
+        %     if sum(significant)
+        %         significant_steps(i) = 1;
+        %     end
+        % end
+        % idx = find(significant_steps);
+        % idx = idx(end);
+        % significant_winner = C.model{C.step==idx & C.win==1};
+        % 
+        % fprintf('\nThe significant winner of the forward selection is:\n%s\n',significant_winner)
+        % fprintf('\nThe r_avg winner of forward selection is:\n%s\n',winning_model);
+        varargout{1} = C;
         
         
     otherwise
