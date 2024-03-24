@@ -2152,7 +2152,7 @@ switch (what)
         sess = [3,4];
         noise_ceil = 0.8691;
         % noise_ceil = 0.2333;
-        model_names = {'additive','emg_additive_avg','additive+2fing','emg_additive_avg+emg_2channel_avg'};
+        model_names = {'additive','emg_additive_avg','additive+2fing','n_fing+additive+2fing','emg_additive_avg+emg_2channel_avg','2fing+emg_2channel_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2759,8 +2759,8 @@ switch (what)
         lim_width = 0.3;
         point_size = 60;
         hold on;
-        drawline(mean(C.R2_emg2force),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
-        drawline(mean(C.R2_force2emg),'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        drawline(mean(C.R2_emg2force),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
+        drawline(mean(C.R2_force2emg),'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
         x1 = 1+randn(1,length(C.R2_emg2force_crossval))/10;
         y1 = C.R2_emg2force_crossval;
         x2 = 2+randn(1,length(C.R2_force2emg_crossval))/10;
@@ -2773,8 +2773,8 @@ switch (what)
 
         lim_width = 0.3;
         hold on;
-        drawline(mean(C.R2_emg2description),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
-        drawline(mean(C.R2_description2emg),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',5,'color',[0.7 0.7 0.7])
+        drawline(mean(C.R2_emg2description),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
+        drawline(mean(C.R2_description2emg),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
         x1 = 4+randn(1,length(C.R2_emg2description_crossval))/10;
         y1 = C.R2_emg2description_crossval;
         x2 = 5+randn(1,length(C.R2_description2emg_crossval))/10;
