@@ -337,3 +337,11 @@ end
 cols_with_all_zeros = find(all(X==0)); % all zeros
 X(:,cols_with_all_zeros) = [];
 
+% Y = zeros(length(chords),5);
+% n = get_num_active_fingers(chords);
+% for i = 1:length(n)
+%     Y(i,n(i)) = 1;
+% end
+% X = [Y,X];
+
+
