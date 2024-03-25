@@ -2157,7 +2157,8 @@ switch (what)
         noise_ceil = 0.8691;
         % noise_ceil = 0.2333;
         model_names = {'n_fing+additive','n_fing+force_avg','n_fing+additive+2fing','n_fing+force_avg+force_2fing'};
-        model_names = {'n_fing','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg','n_fing+nSphere_avg'};
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
+        model_names = {'n_fing','n_fing+2fing','n_fing+emg_2channel_avg','n_fing+emg_2channel_avg+2fing'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
