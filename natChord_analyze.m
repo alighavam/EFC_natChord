@@ -350,6 +350,10 @@ switch (what)
         
         % nSphere model:
         [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
+        % tic
+        % [~,C] = natChord_analyze('nSphere_model','d_type','oval','lambda',0.05,'n_thresh',10,'sampling_option','whole_sampled','plot_option',0);
+        % toc
+
         data.log_slope = C.log_slope;
         data.log_slope_n = C.log_slope_n;
         data.d = C.d;
@@ -2152,7 +2156,8 @@ switch (what)
         sess = [3,4];
         noise_ceil = 0.8691;
         % noise_ceil = 0.2333;
-        model_names = {'additive','emg_additive_avg','additive+2fing','n_fing+additive+2fing','emg_additive_avg+emg_2channel_avg','2fing+emg_2channel_avg'};
+        model_names = {'n_fing+additive','n_fing+force_avg','n_fing+additive+2fing','n_fing+force_avg+force_2fing'};
+        model_names = {'n_fing','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg','n_fing+nSphere_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -2798,7 +2803,9 @@ switch (what)
         alpha = 0.05;
         measure = 'MD';
         sess = [3,4];
-        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg','force_2fing'};
+        models = {'n_fing','n_fing+additive','n_fing+2fing_adj','n_fing+2fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+force_avg','n_fing+force_2fing'};
+        % models = {'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+magnitude_avg','n_fing+nSphere_avg'};
+        % models = {'n_fing+additive','n_fing+2fing_adj','n_fing+2fing'};
         vararginoptions(varargin,{'alpha','measure','models','sess'})
         base_models = models;
         
@@ -2917,7 +2924,7 @@ switch (what)
         alpha = 0.05;
         measure = 'MD';
         sess = [3,4];
-        models = {'n_fing','additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg','force_2fing'};
+        models = {'additive','2fing_adj','2fing','nSphere_avg','magnitude_avg','emg_additive_avg','emg_2channel_avg','force_avg','force_2fing'};
         vararginoptions(varargin,{'alpha','measure','models','sess'})
         base_models = models;
         
