@@ -78,6 +78,7 @@ switch (what)
             mean_dev_tmp = zeros(length(tmp_data.BN),1);
             rt_tmp = zeros(length(tmp_data.BN),1);
             mt_tmp = zeros(size(rt_tmp));
+
             diff_force_f1 = zeros(length(tmp_data.BN),1);
             diff_force_f2 = zeros(length(tmp_data.BN),1);
             diff_force_f3 = zeros(length(tmp_data.BN),1);
@@ -170,6 +171,7 @@ switch (what)
 
             sess = (tmp_data.BN<=10) + 2*(tmp_data.BN>=11);
             tmp_data.sess = sess;
+
             tmp_data.diff_force_f1 = diff_force_f1;
             tmp_data.diff_force_f2 = diff_force_f2;
             tmp_data.diff_force_f3 = diff_force_f3;
@@ -359,7 +361,7 @@ switch (what)
         data.d = C.d;
         
         % magnitude model:
-        [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
+        [~,out] = natChord_analyze('chord_magnitude','normalize_channels',1,'plot_option',0);
         data.magnitude = out.mag;
         data.magnitude_n = out.mag_n;
 
@@ -2631,173 +2633,159 @@ switch (what)
         subjects = unique(data.sn);
         chords = data.chordID(data.sn==1 & data.sess==1);
         
+        [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
+        [force_rel,force_pattern] = natChord_analyze('force_reliability');
+
         C = [];
-        for i = 1:length(subjects)
-            sess = unique(data.sess(data.sn==subjects(i)));
-            for j = 1:length(sess)
-                emg = [data.emg_hold_avg_e1(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e2(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e3(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e4(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_e5(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f1(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f2(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f3(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f4(data.sn==subjects(i) & data.sess==sess(j)),...
-                       data.emg_hold_avg_f5(data.sn==subjects(i) & data.sess==sess(j))];
-                scales = get_emg_scales(subjects(i),sess(j));
-                emg = emg./scales;
-                
-                diff_force = [data.diff_force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
-                              data.diff_force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
-                              data.diff_force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
-                              data.diff_force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
-                              data.diff_force_f5(data.sn==subjects(i) & data.sess==sess(j))];
-                force = [diff_force,diff_force];
-                for col = 1:5
-                    force(force(:,col)<0,col) = 0;
-                    force(force(:,col+5)>0,col+5) = 0;
-                end
-                force(:,6:10) = force(:,6:10)*-1;
-                % force = diff_force;
-
-                % force = [data.force_e1(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_e2(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_e3(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_e4(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_e5(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_f1(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_f2(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_f3(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_f4(data.sn==subjects(i) & data.sess==sess(j)),...
-                %          data.force_f5(data.sn==subjects(i) & data.sess==sess(j))];
-
-                description = make_design_matrix(chords,'additive');
-
-                % EMG to force linear mixture matrix:
-                W = (emg' * emg)^-1 * emg' * force;
-
-                % force to EMG linear mixture matrix:
-                A = (force' * force)^-1 * force' * emg;
-
-                % EMG to behavior linear mixture matrix:
-                W_b = (emg' * emg)^-1 * emg' * description;
-                
-                % behavior to EMG linear mixture matrix:
-                A_b = (description' * description)^-1 * description' * emg;
-
-                % calculate the R^2 of reconstructed values:
-                force_pred = emg*W;
-                R2_emg2force = 1 - sum((force_pred-force).^2,1) ./ sum(force.^2,1);
-                
-                description_pred = emg*W_b;
-                R2_emg2description = 1 - sum((description_pred-description).^2,1) ./ sum(description.^2,1);
-                
-                emg_pred = force*A;
-                R2_force2emg = 1 - sum((emg_pred-emg).^2,1) ./ sum(emg.^2,1);
-                
-                emg_pred = description*A_b;
-                R2_description2emg = 1 - sum((emg_pred-emg).^2,1) ./ sum(emg.^2,1);
-
-                tmp.sn = subjects(i);
-                tmp.sess = sess(j);
-                tmp.R2_emg2force = mean(R2_emg2force);
-                tmp.R2_emg2description = mean(R2_emg2description);
-                tmp.R2_force2emg = mean(R2_force2emg);
-                tmp.R2_description2emg = mean(R2_description2emg);
-
-                % cross validation with 1-chord out:
-                R2_emg2force_crossval = 0;
-                R2_force2emg_crossval = 0;
-                R2_emg2description_crossval = 0;
-                R2_description2emg_crossval = 0;
-                for ch = 1:length(chords)
-                    emg_reduced = emg(setdiff(1:length(chords),ch),:);
-                    force_reduced = force(setdiff(1:length(chords),ch),:);
-                    description_reduced = description(setdiff(1:length(chords),ch),:);
-                
-                    % EMG to force linear mixture matrix:
-                    W = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * force_reduced;
-                    % force to EMG linear mixture matrix:
-                    A = (force_reduced' * force_reduced)^-1 * force_reduced' * emg_reduced;
-                    % EMG to behavior linear mixture matrix:
-                    W_b = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * description_reduced;
-                    % behavior to EMG linear mixture matrix:
-                    A_b = (description_reduced' * description_reduced)^-1 * description_reduced' * emg_reduced;
-    
-                    % calculate the R^2 for the removed chord:
-                    force_pred = emg(ch,:)*W;
-                    R2_tmp = 1 - sum((force_pred-force(ch,:)).^2) / sum(force(ch,:).^2);
-                    R2_emg2force_crossval = R2_emg2force_crossval + R2_tmp/length(chords);
-
-                    description_pred = emg(ch,:)*W_b;
-                    R2_tmp = 1 - sum((description_pred-description(ch,:)).^2) / sum(description(ch,:).^2);
-                    R2_emg2description_crossval = R2_emg2description_crossval + R2_tmp/length(chords);
-
-                    emg_pred = force(ch,:)*A;
-                    R2_tmp = 1 - sum((emg_pred-emg(ch,:)).^2) ./ sum(emg(ch,:).^2);
-                    R2_force2emg_crossval = R2_force2emg_crossval + R2_tmp/length(chords);
-
-                    emg_pred = description(ch,:)*A_b;
-                    R2_tmp = 1 - sum((emg_pred-emg(ch,:)).^2) ./ sum(emg(ch,:).^2);
-                    R2_description2emg_crossval = R2_description2emg_crossval + R2_tmp/length(chords);
-                end
-                tmp.R2_emg2force_crossval = R2_emg2force_crossval;
-                tmp.R2_emg2description_crossval = R2_emg2description_crossval;
-                tmp.R2_force2emg_crossval = R2_force2emg_crossval;
-                tmp.R2_description2emg_crossval = R2_description2emg_crossval;
-                
-                C = addstruct(C,tmp,'row','force');
+        for i = 1:length(emg_pattern.pattern)
+            % average of in subjects:
+            idx_in = setdiff(1:length(emg_pattern.pattern),i);
+            emg = 0;
+            force = 0;
+            for j = 1:length(idx_in)
+                emg = emg + emg_pattern.pattern{idx_in(j)}/length(idx_in);
+                force = force + force_pattern.pattern{idx_in(j)}/length(idx_in);
             end
+            directions = make_design_matrix(chords,'additive');
+
+            % EMG to force linear mixture matrix:
+            W = (emg' * emg)^-1 * emg' * force;
+
+            % force to EMG linear mixture matrix:
+            A = (force' * force)^-1 * force' * emg;
+
+            % EMG to behavior linear mixture matrix:
+            W_b = (emg' * emg)^-1 * emg' * directions;
+            
+            % behavior to EMG linear mixture matrix:
+            A_b = (directions' * directions)^-1 * directions' * emg;
+
+            % calculate the R^2 of reconstructed values:
+            force_pred = emg*W;
+            R2_m2f = mean(1 - sum((force_pred-force_pattern.pattern{i}).^2,1) ./ sum(force_pattern.pattern{i}.^2,1));
+            
+            directions_pred = emg*W_b;
+            R2_m2d = mean(1 - sum((directions_pred-directions).^2,1) ./ sum(directions.^2,1));
+            
+            emg_pred = force*A;
+            R2_f2m = mean(1 - sum((emg_pred-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            
+            emg_pred = directions*A_b;
+            R2_d2m = mean(1 - sum((emg_pred-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            
+            tmp.R2_m2f = R2_m2f;
+            tmp.R2_m2d = R2_m2d;
+            tmp.R2_f2m = R2_f2m;
+            tmp.R2_d2m = R2_d2m;
+
+            % cross validation with 1-chord out:
+            F2M_crossval = zeros(size(emg));
+            D2M_crossval = zeros(size(emg));
+            F_crossval = zeros(size(force));
+            D_crossval = zeros(size(directions));
+            for ch = 1:length(chords)
+                % remove one chord from the train matrices:
+                emg_reduced = emg(setdiff(1:length(chords),ch),:);
+                force_reduced = force(setdiff(1:length(chords),ch),:);
+                directions_reduced = directions(setdiff(1:length(chords),ch),:);
+            
+                % EMG to force linear mixture matrix:
+                W = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * force_reduced;
+                % force to EMG linear mixture matrix:
+                A = (force_reduced' * force_reduced)^-1 * force_reduced' * emg_reduced;
+                % EMG to directions linear mixture matrix:
+                W_b = (emg_reduced' * emg_reduced)^-1 * emg_reduced' * directions_reduced;
+                % directions to EMG linear mixture matrix:
+                A_b = (directions_reduced' * directions_reduced)^-1 * directions_reduced' * emg_reduced;
+
+                % add predictions to the corresponding matrices:
+                force_pred = emg(ch,:)*W;
+                F_crossval(ch,:) = force_pred;
+
+                directions_pred = emg(ch,:)*W_b;
+                D_crossval(ch,:) = directions_pred;
+
+                emg_pred = force(ch,:)*A;
+                F2M_crossval(ch,:) = emg_pred;
+
+                emg_pred = directions(ch,:)*A_b;
+                D2M_crossval(ch,:) = emg_pred;
+                
+            end
+            tmp.R2_m2f_crossval = mean(1 - sum((F_crossval-force_pattern.pattern{i}).^2,1) ./ sum(force_pattern.pattern{i}.^2,1));
+            tmp.R2_m2d_crossval = mean(1 - sum((D_crossval-directions).^2,1) ./ sum(directions.^2,1));
+            tmp.R2_f2m_crossval = mean(1 - sum((F2M_crossval-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            tmp.R2_d2m_crossval = mean(1 - sum((D2M_crossval-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            
+            C = addstruct(C,tmp,'row','force');
         end
         varargout{1} = C;
         
         % significant tests:
-        [t,p] = ttest(C.R2_force2emg_crossval,C.R2_emg2force_crossval,1,'paired');
-        fprintf('test if force2emg > emg2force: %.4f\n',p)
-        [t,p] = ttest(C.R2_description2emg_crossval,C.R2_emg2description_crossval,1,'paired');
-        fprintf('test if direction2emg > emg2direction: %.4f\n',p)
+        % [t,p] = ttest(C.R2_force2emg_crossval,C.R2_emg2force_crossval,1,'paired');
+        % fprintf('test if force2emg > emg2force: %.4f\n',p)
+        % [t,p] = ttest(C.R2_description2emg_crossval,C.R2_emg2description_crossval,1,'paired');
+        % fprintf('test if direction2emg > emg2direction: %.4f\n',p)
 
-
-        % PLOT:
+        % PLOT 1:
         fig = figure('Position', [500 500 300 300]);
         fontsize(fig, my_font.tick_label, 'points')
-        lim_width = 0.3;
-        point_size = 60;
+        lim_width = 0.4;
         hold on;
-        drawline(mean(C.R2_emg2force),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
-        drawline(mean(C.R2_force2emg),'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
-        x1 = 1+randn(1,length(C.R2_emg2force_crossval))/10;
-        y1 = C.R2_emg2force_crossval;
-        x2 = 2+randn(1,length(C.R2_force2emg_crossval))/10;
-        y2 = C.R2_force2emg_crossval;
-        for i = 1:length(x1)
-            plot([x1(i) x2(i)],[y1(i) y2(i)],'color',[0.7 0.7 0.7]);
-        end
-        scatter(x1,y1,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
-        scatter(x2,y2,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
+        drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
 
-        lim_width = 0.3;
-        hold on;
-        drawline(mean(C.R2_emg2description),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
-        drawline(mean(C.R2_description2emg),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',5,'color',[0.85 0.85 0.85])
-        x1 = 4+randn(1,length(C.R2_emg2description_crossval))/10;
-        y1 = C.R2_emg2description_crossval;
-        x2 = 5+randn(1,length(C.R2_description2emg_crossval))/10;
-        y2 = C.R2_description2emg_crossval;
-        for i = 1:length(x1)
-            plot([x1(i) x2(i)],[y1(i) y2(i)],'color',[0.7 0.7 0.7]);
-        end
-        scatter(x1,y1,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[1,1,1],'LineWidth',1.5)
-        scatter(x2,y2,point_size,'MarkerEdgeColor',[0,0,0],'MarkerFaceColor',[0.7,0.7,0.7],'LineWidth',1.5)
+        y1 = C.R2_m2d_crossval;
+        y2 = C.R2_m2f_crossval;
+        bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
 
-        drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        ylim([-0.2,1.1])
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            
+        y1 = C.R2_d2m_crossval;
+        y2 = C.R2_f2m_crossval;
+        bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+
+        % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
+        ylim([0,1.1])
         xlim([0,6])
         h = gca;
         h.XTick = [1,2,4,5];
-        h.XTickLabels = {'emg to force','force to emg','emg to direction','direction to emg'};
-        ylabel('cross-val $R^2$','Interpreter','latex')
+        h.XTickLabels = {'m2d','m2f','d2m','f2m'};
+        ylabel('$R^2$','Interpreter','latex')
+        title('chord cross-validated regression')
+
+        % PLOT 2:
+        fig = figure('Position', [500 500 300 300]);
+        fontsize(fig, my_font.tick_label, 'points')
+        lim_width = 0.4;
+        hold on;
+        drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+
+        y1 = C.R2_m2d;
+        y2 = C.R2_m2f;
+        bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            
+        y1 = C.R2_d2m;
+        y2 = C.R2_f2m;
+        bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+
+        % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
+        ylim([0,1.1])
+        xlim([0,6])
+        h = gca;
+        h.XTick = [1,2,4,5];
+        h.XTickLabels = {'m2d','m2f','d2m','f2m'};
+        ylabel('$R^2$','Interpreter','latex')
+        title('Full matrix regression')
 
     case 'forward_selection'
         % handling input arguments:
@@ -3069,6 +3057,98 @@ switch (what)
         % fprintf('\nThe r_avg winner of forward selection is:\n%s\n',winning_model);
         varargout{1} = C;
         
+    case 'emg_reliability'
+        data = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        subj = unique(data.sn);
+        
+        % save all emg patterns:
+        emg_pattern = [];
+        for i = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(i)));
+            for j = 1:length(sess)
+                tmp = [];
+                row = data.sn==subj(i) & data.sess==sess(j);
+                tmp_pattern = [data.emg_e1(row),data.emg_e2(row),data.emg_e3(row),data.emg_e4(row),data.emg_e5(row),...
+                               data.emg_f1(row),data.emg_f2(row),data.emg_f3(row),data.emg_f4(row),data.emg_f5(row)];
+                tmp.sn = subj(i);
+                tmp.sess = sess(j);
+                tmp.pattern = {tmp_pattern};
+                emg_pattern = addstruct(emg_pattern,tmp,'row','force');
+            end
+        end
+
+        % estimate leave-one-out reliability
+        C = [];
+        for i = 1:length(emg_pattern.pattern)
+            idx_in = setdiff(1:length(emg_pattern.pattern),i);
+            avg = 0;
+            for j = 1:length(idx_in)
+                avg = avg + emg_pattern.pattern{idx_in(j)}/length(idx_in);
+            end
+            
+            tmp = [];
+            % corr of leave subject with average of included subjects:
+            tmp.r = corr2(avg,emg_pattern.pattern{i});
+            % r2 of out subejct with  average of included subjects:
+            SSE = sum((emg_pattern.pattern{i} - avg).^2,1);
+            SST = sum(avg.^2,1);
+            tmp.r2 = mean(1 - SSE./SST);
+            C = addstruct(C,tmp,'row','force');
+        end
+        varargout{1} = C;
+        varargout{2} = emg_pattern;
+
+    case 'force_reliability'
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        subj = unique(data.sn);
+        
+        % save all emg patterns:
+        force_pattern = [];
+        for i = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(i)));
+            for j = 1:length(sess)
+                tmp = [];
+                row = data.sn==subj(i) & data.sess==sess(j);
+                diff_force = [data.diff_force_f1(row),...
+                              data.diff_force_f2(row),...
+                              data.diff_force_f3(row),...
+                              data.diff_force_f4(row),...
+                              data.diff_force_f5(row)];
+                force = [diff_force,diff_force];
+                for col = 1:5
+                    force(force(:,col)<0,col) = 0;
+                    force(force(:,col+5)>0,col+5) = 0;
+                end
+                force(:,6:10) = force(:,6:10)*-1;
+
+
+                tmp.sn = subj(i);
+                tmp.sess = sess(j);
+                tmp.pattern = {force};
+                force_pattern = addstruct(force_pattern,tmp,'row','force');
+            end
+        end
+
+        % estimate leave-one-out reliability
+        C = [];
+        for i = 1:length(force_pattern.pattern)
+            idx_in = setdiff(1:length(force_pattern.pattern),i);
+            avg = 0;
+            for j = 1:length(idx_in)
+                avg = avg + force_pattern.pattern{idx_in(j)}/length(idx_in);
+            end
+            
+            tmp = [];
+            % corr of leave subject with average of included subjects:
+            tmp.r = corr2(avg,force_pattern.pattern{i});
+            % r2 of out subejct with  average of included subjects:
+            SSE = sum((force_pattern.pattern{i} - avg).^2,1);
+            SST = sum(avg.^2,1);
+            tmp.r2 = mean(1 - SSE./SST);
+            C = addstruct(C,tmp,'row','force');
+        end
+        varargout{1} = C;
+        varargout{2} = force_pattern;
         
     otherwise
         error('The analysis you entered does not exist!')
