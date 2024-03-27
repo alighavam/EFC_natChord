@@ -2630,7 +2630,6 @@ switch (what)
     case 'emg_force_transform'
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
-        subjects = unique(data.sn);
         chords = data.chordID(data.sn==1 & data.sess==1);
         
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
@@ -2647,7 +2646,7 @@ switch (what)
                 force = force + force_pattern.pattern{idx_in(j)}/length(idx_in);
             end
             directions = make_design_matrix(chords,'additive');
-
+            
             % EMG to force linear mixture matrix:
             W = (emg' * emg)^-1 * emg' * force;
 
@@ -2728,64 +2727,81 @@ switch (what)
         % fprintf('test if direction2emg > emg2direction: %.4f\n',p)
 
         % PLOT 1:
-        fig = figure('Position', [500 500 300 300]);
-        fontsize(fig, my_font.tick_label, 'points')
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+        ax1.PositionConstraint = "innerposition";
+        axes(ax1);
+        x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_f2m),1)] , [4*ones(length(C.R2_m2f),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
+        y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
         lim_width = 0.4;
-        hold on;
-        drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
 
-        y1 = C.R2_m2d_crossval;
-        y2 = C.R2_m2f_crossval;
-        bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            
-        y1 = C.R2_d2m_crossval;
-        y2 = C.R2_f2m_crossval;
-        bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-
-        % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        ylim([0,1.1])
+        ylim([0.5,1])
         xlim([0,6])
         h = gca;
-        h.XTick = [1,2,4,5];
-        h.XTickLabels = {'m2d','m2f','d2m','f2m'};
-        ylabel('$R^2$','Interpreter','latex')
-        title('chord cross-validated regression')
+        h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+        h.XAxis.FontSize = my_font.xlabel;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
+        fontname("Arial")
 
-        % PLOT 2:
-        fig = figure('Position', [500 500 300 300]);
-        fontsize(fig, my_font.tick_label, 'points')
-        lim_width = 0.4;
-        hold on;
-        drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-
-        y1 = C.R2_m2d;
-        y2 = C.R2_m2f;
-        bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            
-        y1 = C.R2_d2m;
-        y2 = C.R2_f2m;
-        bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-
-        % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        ylim([0,1.1])
-        xlim([0,6])
-        h = gca;
-        h.XTick = [1,2,4,5];
-        h.XTickLabels = {'m2d','m2f','d2m','f2m'};
-        ylabel('$R^2$','Interpreter','latex')
-        title('Full matrix regression')
+        % drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % 
+        % y1 = C.R2_m2d_crossval;
+        % y2 = C.R2_m2f_crossval;
+        % bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        % bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+        % 
+        % drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % 
+        % y1 = C.R2_d2m_crossval;
+        % y2 = C.R2_f2m_crossval;
+        % bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        % bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+        % 
+        % % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
+        % ylim([0,1.1])
+        % xlim([0,6])
+        % h = gca;
+        % h.XTick = [1,2,4,5];
+        % h.XTickLabels = {'m2d','m2f','d2m','f2m'};
+        % ylabel('$R^2$','Interpreter','latex')
+        % title('chord cross-validated regression')
+        % 
+        % % PLOT 2:
+        % fig = figure('Position', [500 500 300 300]);
+        % fontsize(fig, my_font.tick_label, 'points')
+        % lim_width = 0.4;
+        % hold on;
+        % drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % 
+        % y1 = C.R2_m2d;
+        % y2 = C.R2_m2f;
+        % bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        % bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+        % 
+        % drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        % 
+        % y1 = C.R2_d2m;
+        % y2 = C.R2_f2m;
+        % bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
+        % bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
+        % 
+        % % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
+        
+        % h = gca;
+        % h.XTick = [1,2,4,5];
+        % h.XTickLabels = {'m2d','m2f','d2m','f2m'};
+        % ylabel('$R^2$','Interpreter','latex')
+        % title('Full matrix regression')
 
     case 'forward_selection'
         % handling input arguments:
