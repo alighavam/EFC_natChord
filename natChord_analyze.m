@@ -2156,8 +2156,6 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        noise_ceil = 0.8691;
-        % noise_ceil = 0.2333;
         model_names = {'n_fing+additive','n_fing+force_avg','n_fing+additive+2fing','n_fing+force_avg+force_2fing'};
         model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
         model_names = {'n_fing','n_fing+2fing','n_fing+emg_2channel_avg','n_fing+emg_2channel_avg+2fing'};
@@ -2181,6 +2179,9 @@ switch (what)
             % missed all 5 repetitions in one session:
             values(:,i) = mean([values_tmp(data.sess==sess(1) & data.sn==subj(i)),values_tmp(data.sess==sess(2) & data.sn==subj(i))],2,'omitmissing');
         end
+
+        [R,R2] = crossval_reliability(values);
+        noise_ceil = mean(R);
 
         % modelling the difficulty for chords
         C = [];
@@ -2223,6 +2224,7 @@ switch (what)
                 C_tmp.stats = {STATS};
                 C_tmp.r = r;
                 C_tmp.r2 = r2;
+                C_tmp.noise_ceil = noise_ceil;
 
                 C = addstruct(C,C_tmp,'row',1);
             end
@@ -2731,7 +2733,7 @@ switch (what)
         ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
         ax1.PositionConstraint = "innerposition";
         axes(ax1);
-        x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_f2m),1)] , [4*ones(length(C.R2_m2f),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
+        x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_m2f),1)] , [4*ones(length(C.R2_f2m_crossval),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
         y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
         [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
         lim_width = 0.4;
@@ -2748,60 +2750,6 @@ switch (what)
         h.YAxis.FontSize = my_font.tick_label;
         ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
         fontname("Arial")
-
-        % drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % 
-        % y1 = C.R2_m2d_crossval;
-        % y2 = C.R2_m2f_crossval;
-        % bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        % bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-        % 
-        % drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % 
-        % y1 = C.R2_d2m_crossval;
-        % y2 = C.R2_f2m_crossval;
-        % bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        % bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-        % 
-        % % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        % ylim([0,1.1])
-        % xlim([0,6])
-        % h = gca;
-        % h.XTick = [1,2,4,5];
-        % h.XTickLabels = {'m2d','m2f','d2m','f2m'};
-        % ylabel('$R^2$','Interpreter','latex')
-        % title('chord cross-validated regression')
-        % 
-        % % PLOT 2:
-        % fig = figure('Position', [500 500 300 300]);
-        % fontsize(fig, my_font.tick_label, 'points')
-        % lim_width = 0.4;
-        % hold on;
-        % drawline(mean(force_rel.r2),'dir','horz','lim',[1-lim_width,1+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % drawline(1,'dir','horz','lim',[2-lim_width,2+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % 
-        % y1 = C.R2_m2d;
-        % y2 = C.R2_m2f;
-        % bar(1,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        % bar(2,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-        % 
-        % drawline(mean(emg_rel.r2),'dir','horz','lim',[4-lim_width,4+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % drawline(mean(emg_rel.r2),'dir','horz','lim',[5-lim_width,5+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        % 
-        % y1 = C.R2_d2m;
-        % y2 = C.R2_f2m;
-        % bar(4,mean(y1),'FaceColor',colors_gray(2,:),'LineStyle','none')
-        % bar(5,mean(y2),'FaceColor',colors_blue(3,:),'LineStyle','none')
-        % 
-        % % drawline(1,'linestyle',':','linewidth',2,'dir','horz','color',[0.8,0.8,0.8])
-        
-        % h = gca;
-        % h.XTick = [1,2,4,5];
-        % h.XTickLabels = {'m2d','m2f','d2m','f2m'};
-        % ylabel('$R^2$','Interpreter','latex')
-        % title('Full matrix regression')
 
     case 'forward_selection'
         % handling input arguments:
@@ -3166,6 +3114,35 @@ switch (what)
         varargout{1} = C;
         varargout{2} = force_pattern;
         
+    case 'emg_behaviour_model_comparison'
+        model_names = {'n_fing+additive','n_fing+emg_additive_avg','n_fing+additive+2fing','n_fing+emg_additive_avg+emg_2channel_avg'};
+        [C,stats] = natChord_analyze('model_testing_all_efc1','measure','MD','model_names',model_names);
+        varargout{1} = C;
+        varargout{2} = stats;
+        
+        % PLOT:
+        figure;
+        ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+        ax1.PositionConstraint = "innerposition";
+        axes(ax1);
+        drawline(C.noise_ceil(1),'dir','horz','lim',[0,6],'linewidth',2,'color',[0.7 0.7 0.7],'linestyle',':'); hold on;
+        
+        N = length(C.r(strcmp(C.model,model_names{1})));
+        x = [[ones(N,1) ; 2*ones(N,1)] , [4*ones(N,1) ; 5*ones(N,1)]];
+        y = [[C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{3}))] , [C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{4}))]];
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
+        
+        ylim([0.6,1])
+        xlim([0,6])
+        h = gca;
+        h.XTick = [1.5 , 4.5];
+        h.YTick = 0.5:0.1:1;
+        h.XTickLabels = {'Additive','Additive+Interaction'};
+        h.XAxis.FontSize = my_font.xlabel;
+        h.YAxis.FontSize = my_font.tick_label;
+        ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
+        fontname("Arial")
+    
     otherwise
         error('The analysis you entered does not exist!')
 end
