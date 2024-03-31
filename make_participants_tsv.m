@@ -60,6 +60,15 @@ row06.emg_electrode_sess02 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
 row06.emg_electrode_nat01 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
 row06.emg_electrode_nat02 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
 
+row07 = [];
+row07.participant_id = 'subj07';
+row07.sex = 'F';
+row07.age = 29;
+row07.emg_electrode_sess01 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
+row07.emg_electrode_sess02 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
+row07.emg_electrode_nat01 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
+row07.emg_electrode_nat02 = '7a,6b,5a,5b,6a,10a,8b,7b,8a,10b';
+
 row08 = [];
 row08.participant_id = 'subj08';
 row08.sex = 'F';
@@ -75,6 +84,7 @@ participants_tsv = addstruct(participants_tsv,row03,'row','force');
 participants_tsv = addstruct(participants_tsv,row04,'row','force');
 participants_tsv = addstruct(participants_tsv,row05,'row','force');
 participants_tsv = addstruct(participants_tsv,row06,'row','force');
+participants_tsv = addstruct(participants_tsv,row07,'row','force');
 participants_tsv = addstruct(participants_tsv,row08,'row','force');
 
 dsave(fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord', 'data', 'participants.tsv'),participants_tsv)
