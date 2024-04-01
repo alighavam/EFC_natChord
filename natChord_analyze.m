@@ -1306,7 +1306,7 @@ switch (what)
                 chords_mean_dev = zeros(length(chords),1);
                 for k = 1:length(chords)
                     row = data.sn==subjects(sn) & data.chordID==chords(k);
-                    chords_mean_dev(k) = data.MD_efc(row & data.sess==sess(j));
+                    chords_mean_dev(k) = mean(data.MD_efc(row));
                 end
                 
                 % container for the each session's dataframe:
@@ -2204,7 +2204,9 @@ switch (what)
         model_names = {'n_fing+additive','n_fing+force_avg','n_fing+additive+2fing','n_fing+force_avg+force_2fing'};
         model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
         model_names = {'n_fing','n_fing+2fing','n_fing+emg_2channel_avg','n_fing+emg_2channel_avg+2fing'};
-        vararginoptions(varargin,{'chords','measure','model_names'})
+        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
+        conference_fig = 0;
+        vararginoptions(varargin,{'chords','measure','model_names','conference_fig'})
         
         % loading data:
         chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -2307,9 +2309,6 @@ switch (what)
             ttest(r-noise_ceil,[],2,'onesample')
         end
 
-        % PLOT - regression results:
-        figure;
-        ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
         for j = 1:length(model_names)
             % getting cross validated r:
             r = C.r(strcmp(C.model,model_names{j}));
@@ -2318,28 +2317,75 @@ switch (what)
             r_sem(j) = std(r)/sqrt(length(r));
         end
 
-        % r_avg = r_avg/noise_ceil;
-        % noise_ceil = noise_ceil/noise_ceil;
+        if ~conference_fig
+            % PLOT - regression results:
+            figure;
+            ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
+            drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
+            plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
+            errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
+            scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
+            box off
+            h = gca;
+            % h.YTick = 0:0.25:1;
+            h.XTick = 1:length(model_names);
+            h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
+            h.XAxis.FontSize = my_font.tick_label;
+            h.YAxis.FontSize = my_font.tick_label;
+            ylabel('r','FontSize',my_font.ylabel)
+            % ylim([0, .85])
+            % h.YTick = 0:0.4:0.8;
+            ylim([0.6 1])
+            h.YTick = 0.6:0.2:1;
+            % h.YTickLabel = {'0','1'};
+            xlim([0.5,length(model_names)+0.5])
+            fontname("Arial")
+    
+    
+            % PLOT:
+            figure;
+            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+            ax1.PositionConstraint = "innerposition";
+            axes(ax1);
+            drawline(C.noise_ceil(1),'dir','horz','lim',[0,6],'linewidth',2,'color',[0.7 0.7 0.7],'linestyle',':'); hold on;
+            
+            N = length(C.r(strcmp(C.model,model_names{1})));
+            x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
+            y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{4}))];
+            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1); 
+            
+            ylim([0.6,1])
+            xlim([0,6])
+            h = gca;
+            h.XTick = [1.5 , 4.5];
+            h.YTick = 0.5:0.1:1;
+            h.XTickLabels = {'Additive','Additive+Interaction'};
+            h.XAxis.FontSize = my_font.xlabel;
+            h.YAxis.FontSize = my_font.tick_label;
+            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
+            fontname("Arial")
+        else
+            fig = figure('Units','centimeters', 'Position',[15 15 25 28]);
+            drawline(C.noise_ceil(1),'dir','horz','lim',[0,6.5],'linewidth',4,'color',[0.8 0.8 0.8],'linestyle',':'); hold on;
+            
+            N = length(C.r(strcmp(C.model,model_names{1})));
+            x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
+            y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{4}))];
+            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+            
+            ylim([0.6,1])
+            xlim([0,6.5])
+            h = gca;
+            h.XTick = [1 , 2.5, 4, 5.5];
+            h.YTick = 0.5:0.1:1;
+            h.XTickLabels = {'Finger Count','+Natural Statistics','+Magnitude','All Together'};
+            h.XAxis.FontSize = my_font.conf_tick_label;
+            h.YAxis.FontSize = my_font.conf_tick_label;
+            h.LineWidth = conf.axis_width;
+            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+            fontname("Arial")
 
-        drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
-        plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
-        errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
-        scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
-        box off
-        h = gca;
-        % h.YTick = 0:0.25:1;
-        h.XTick = 1:length(model_names);
-        h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
-        h.XAxis.FontSize = my_font.tick_label;
-        h.YAxis.FontSize = my_font.tick_label;
-        ylabel('r','FontSize',my_font.ylabel)
-        % ylim([0, .85])
-        % h.YTick = 0:0.4:0.8;
-        ylim([0.6 1])
-        h.YTick = 0.6:0.2:1;
-        % h.YTickLabel = {'0','1'};
-        xlim([0.5,length(model_names)+0.5])
-        fontname("Arial")
+        end
 
         varargout{1} = C;
         varargout{2} = stats;
@@ -2675,6 +2721,10 @@ switch (what)
         end
 
     case 'emg_force_transform'
+        coeff = []; % transform matrix if we want to project emg data to a certain coefficient.
+        is_plot = 1;
+        vararginoptions(varargin,{'coeff','is_plot'})
+
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         chords = data.chordID(data.sn==1 & data.sess==1);
@@ -2682,6 +2732,13 @@ switch (what)
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
         [force_rel,force_pattern] = natChord_analyze('force_reliability');
 
+        % transform the EMGs if transform matrix was given:
+        if ~isempty(coeff)
+            for i = 1:length(emg_pattern.pattern)
+                emg_pattern.pattern{i} = emg_pattern.pattern{i} * coeff{i};
+            end
+        end
+        
         C = [];
         for i = 1:length(emg_pattern.pattern)
             % average of in subjects:
@@ -2709,20 +2766,28 @@ switch (what)
             % calculate the R^2 of reconstructed values:
             force_pred = emg*W;
             R2_m2f = mean(1 - sum((force_pred-force_pattern.pattern{i}).^2,1) ./ sum(force_pattern.pattern{i}.^2,1));
+            R_m2f = corr2(force_pred,force_pattern.pattern{i});
             
             directions_pred = emg*W_b;
             R2_m2d = mean(1 - sum((directions_pred-directions).^2,1) ./ sum(directions.^2,1));
+            R_m2d = corr2(directions_pred,directions);
             
             emg_pred = force*A;
             R2_f2m = mean(1 - sum((emg_pred-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            R_f2m = corr2(emg_pred,emg_pattern.pattern{i});
             
             emg_pred = directions*A_b;
             R2_d2m = mean(1 - sum((emg_pred-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            R_d2m = corr2(emg_pred,emg_pattern.pattern{i});
             
             tmp.R2_m2f = R2_m2f;
             tmp.R2_m2d = R2_m2d;
             tmp.R2_f2m = R2_f2m;
             tmp.R2_d2m = R2_d2m;
+            tmp.R_m2f = R_m2f;
+            tmp.R_m2d = R_m2d;
+            tmp.R_f2m = R_f2m;
+            tmp.R_d2m = R_d2m;
 
             % cross validation with 1-chord out:
             F2M_crossval = zeros(size(emg));
@@ -2762,6 +2827,10 @@ switch (what)
             tmp.R2_m2d_crossval = mean(1 - sum((D_crossval-directions).^2,1) ./ sum(directions.^2,1));
             tmp.R2_f2m_crossval = mean(1 - sum((F2M_crossval-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
             tmp.R2_d2m_crossval = mean(1 - sum((D2M_crossval-emg_pattern.pattern{i}).^2,1) ./ sum(emg_pattern.pattern{i}.^2,1));
+            tmp.R_m2f_crossval = corr2(F_crossval,force_pattern.pattern{i});
+            tmp.R_m2d_crossval = corr2(D_crossval,directions);
+            tmp.R_f2m_crossval = corr2(F2M_crossval,emg_pattern.pattern{i});
+            tmp.R_d2m_crossval = corr2(D2M_crossval,emg_pattern.pattern{i});
             
             C = addstruct(C,tmp,'row','force');
         end
@@ -2772,29 +2841,56 @@ switch (what)
         % fprintf('test if force2emg > emg2force: %.4f\n',p)
         % [t,p] = ttest(C.R2_description2emg_crossval,C.R2_emg2description_crossval,1,'paired');
         % fprintf('test if direction2emg > emg2direction: %.4f\n',p)
-
-        % PLOT 1:
-        figure;
-        ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-        ax1.PositionConstraint = "innerposition";
-        axes(ax1);
-        x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_m2f),1)] , [4*ones(length(C.R2_f2m_crossval),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
-        y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
-        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
-        lim_width = 0.4;
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-        drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-
-        ylim([0.5,1])
-        xlim([0,6])
-        h = gca;
-        h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
-        h.XAxis.FontSize = my_font.xlabel;
-        h.YAxis.FontSize = my_font.tick_label;
-        ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
-        fontname("Arial")
+        
+        if is_plot
+            % PLOT 1:
+            figure;
+            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+            ax1.PositionConstraint = "innerposition";
+            axes(ax1);
+            x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_m2f),1)] , [4*ones(length(C.R2_f2m_crossval),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
+            y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
+            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
+            lim_width = 0.4;
+            drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+    
+            ylim([0.5,1])
+            xlim([0,6])
+            h = gca;
+            h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+            h.XAxis.FontSize = my_font.xlabel;
+            h.YAxis.FontSize = my_font.tick_label;
+            h.LineWidth = 2;
+            ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
+            fontname("Arial")
+    
+            % PLOT 2:
+            figure;
+            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+            ax1.PositionConstraint = "innerposition";
+            axes(ax1);
+            x = [[ones(length(C.R_f2m),1) ; 2*ones(length(C.R_m2f),1)] , [4*ones(length(C.R_f2m_crossval),1) ; 5*ones(length(C.R_m2f_crossval),1)]];
+            y = [[C.R_f2m ; C.R_f2m_crossval] , [C.R_m2f ; C.R_m2f_crossval]];
+            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
+            lim_width = 0.4;
+            drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+            
+            ylim([0.5,1])
+            xlim([0,6])
+            h = gca;
+            h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+            h.XAxis.FontSize = my_font.xlabel;
+            h.YAxis.FontSize = my_font.tick_label;
+            h.LineWidth = 2;
+            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
+            fontname("Arial")
+        end
 
     case 'forward_selection'
         % handling input arguments:
@@ -3187,6 +3283,140 @@ switch (what)
         h.YAxis.FontSize = my_font.tick_label;
         ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
         fontname("Arial")
+
+    case 'PCA_emg'
+        sampling_option = 'whole_thresholded';
+        num_dim = 4;
+        vararginoptions(varargin,{'sampling_option','num_dim'});
+
+        % loading data:
+        [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
+        chords = data.chordID(data.sn==1 & data.sess==1);
+        subjects = unique(data.sn);
+        
+        % tranforming subject numbers to subject names:
+        subject_names = strcat('subj',num2str(subjects,'%02.f'));
+        
+
+        % container for the dataframe:
+        C = [];
+        for sn = 1:length(subjects)
+            % set natural EMG file name:
+            file_name = fullfile(project_path, 'analysis', ['natChord_' subject_names(sn,:) '_emg_natural_' sampling_option '.mat']);
+            
+            % loading natural EMG dists:
+            emg_dist = load(file_name);
+            emg_dist = emg_dist.emg_natural_dist;
+            
+            sess = unique(data.sess(data.sn == subjects(sn)));
+            for j = 1:length(sess)
+                % scaling factors:
+                scales = get_emg_scales(subjects(sn),sess(j));
+                
+                emg_dist_sess = getrow(emg_dist,emg_dist.sess==sess(j));
+                % normalizing the natural EMGs:
+                for i = 1:length(emg_dist_sess.dist)
+                    emg_dist_sess.dist{i} = (emg_dist_sess.dist{i} ./ scales);
+                end
+                
+                % getting avg mean deviation of chords across sessions:
+                MD = zeros(length(chords),1);
+                for k = 1:length(chords)
+                    row = data.sn==subjects(sn) & data.chordID==chords(k);
+                    MD(k) = data.MD_efc(row & data.sess==sess(j));
+                end
+
+                % PCA of natural and chord EMG:
+                natural_emg = vertcat(emg_dist_sess.dist{:});
+                [coeff_nat, score_nat, eigenvalues_nat, ~, explained_nat] = pca(natural_emg);
+                [coeff_chord, score_chord, eigenvalues_chord, ~, explained_chord] = pca(emg_pattern.pattern{emg_pattern.sn==subjects(sn) & emg_pattern.sess==sess(j)});
+                tmp.sn = subjects(sn);
+                tmp.sess = sess(j);
+                tmp.explained_nat = explained_nat';
+                tmp.explained_chord = explained_chord';
+                tmp.coeff_nat = {coeff_nat};
+                tmp.coeff_chord = {coeff_chord};
+                C = addstruct(C,tmp,'row','force');
+            end
+        end
+        varargout{1} = C;
+
+        % force explained by projected EMG to natural and Chord:
+        C0 = natChord_analyze('emg_force_transform','is_plot',0);
+        C_nat = natChord_analyze('emg_force_transform','is_plot',0,'coeff',C.coeff_nat);
+        C_chord = natChord_analyze('emg_force_transform','is_plot',0,'coeff',C.coeff_chord);
+        % PLOT:
+        fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
+        x = [ones(length(C_nat.R_m2f),1) ; 2*ones(length(C_chord.R_m2f),1)];
+        y = [C_nat.R_m2f ; C_chord.R_m2f];
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+        drawline(mean(C0.R_m2f),'dir','horz','lim',[0,3.5],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle',':')
+        
+        ylim([0,1])
+        xlim([0,3.5])
+        h = gca;
+        h.XTickLabels = {'Project to Natural','Project to Chord'};
+        h.XAxis.FontSize = my_font.conf_tick_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.LineWidth = 2;
+        ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+        fontname("Arial")
+
+        % projecting the EMG to different number of coeffs and explaining force:
+        for i = 1:length(C.coeff_nat)
+            coeff1{i} = [C.coeff_nat{i}(:,1:num_dim)];
+            coeff2{i} = [C.coeff_nat{i}(:,num_dim+1:end)];
+        end
+        C1 = natChord_analyze('emg_force_transform','coeff',coeff1,'is_plot',0);
+        C2 = natChord_analyze('emg_force_transform','coeff',coeff2,'is_plot',0);
+        % PLOT:
+        fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
+        x = [ones(length(C1.R_m2f),1) ; 2*ones(length(C2.R_m2f),1)];
+        y = [C1.R_m2f ; C2.R_m2f];
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+        drawline(mean(C_nat.R_m2f),'dir','horz','lim',[0,3.5],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle',':')
+        
+        y = C.explained_nat';
+        eig_sum = sum(y,1);
+        y = y./eig_sum;
+        y = cumsum(y,1)*100;
+        y = mean(y,2);
+
+        ylim([0,1])
+        xlim([0,3.5])
+        h = gca;
+        h.XTickLabels = {num2str(y(num_dim),'%.2f'),num2str(100-y(num_dim),'%.2f')};
+        h.XAxis.FontSize = my_font.conf_tick_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.LineWidth = 2;
+        ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+        fontname("Arial")
+
+        % PLOT - var explained by dimension:
+        fig = figure('Units','centimeters', 'Position',[15 15 15 15]);
+        drawline(100,'dir','horz','lim',[0,11],'linewidth',4,'color',[0.8 0.8 0.8],'linestyle','-'); hold on;
+
+        x = repmat((1:10)',size(C.explained_nat,1),1);
+        y = C.explained_nat';
+        eig_sum = sum(y,1);
+        y = y./eig_sum;
+        y = cumsum(y,1)*100;
+        y = y(:);
+        lineplot(x,y,'markertype','o','markersize',5,'markerfill',colors_red(2,:),'markercolor',colors_red(2,:),'linecolor',colors_red(2,:),'linewidth',2,'errorcolor',colors_red(2,:)); hold on;
+
+        x = repmat((1:10)',size(C.explained_chord,1),1);
+        y = C.explained_chord';
+        eig_sum = sum(y,1);
+        y = y./eig_sum;
+        y = cumsum(y,1)*100;
+        y = y(:);
+        lineplot(x,y,'markersize',5,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorcolor',colors_blue(5,:));
+        lgd = legend({'','natural','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','chord'});
+        xlim([0,11])
+        ylim([0,105])
+        ylabel('Variance Explained (%)')
+        xlabel('Number of Dimensions')
     
     otherwise
         error('The analysis you entered does not exist!')
