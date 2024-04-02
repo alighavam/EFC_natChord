@@ -28,8 +28,8 @@ my_font.ylabel = 10;
 my_font.title = 11;
 my_font.tick_label = 8;
 my_font.legend = 8;
-my_font.conf_tick_label = 32;
-my_font.conf_label = 36;
+my_font.conf_tick_label = 28;
+my_font.conf_label = 30;
 my_font.conf_legend = 32;
 my_font.conf_title = 36;
 
@@ -39,6 +39,7 @@ conf.line_width = 8;
 conf.marker_size = 350;
 conf.horz_line_width = 6;
 conf.axis_width = 3;
+conf.bar_width = 2.5;
 
 switch (what)
     case 'subject_routine'
@@ -3350,7 +3351,7 @@ switch (what)
         fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
         x = [ones(length(C_nat.R_m2f),1) ; 2*ones(length(C_chord.R_m2f),1)];
         y = [C_nat.R_m2f ; C_chord.R_m2f];
-        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_width); 
         drawline(mean(C0.R_m2f),'dir','horz','lim',[0,3.5],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle',':')
         
         ylim([0,1])
@@ -3374,7 +3375,7 @@ switch (what)
         fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
         x = [ones(length(C1.R_m2f),1) ; 2*ones(length(C2.R_m2f),1)];
         y = [C1.R_m2f ; C2.R_m2f];
-        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_width); 
         drawline(mean(C_nat.R_m2f),'dir','horz','lim',[0,3.5],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle',':')
         
         y = C.explained_nat';
