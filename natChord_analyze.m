@@ -2533,12 +2533,10 @@ switch (what)
         varargout{1} = C;
         varargout{2} = stats;
 
-    case 'chord_natural_EMG_patterns'
-        sess = 1;
-
+    case 'chord_natural_EMG_patterns'        
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
-        chords = data.chordID(data.sn==1 & data.sess==sess);
+        chords = data.chordID(data.sn==1 & data.sess==1);
 
         emg_locs_names = ["e1";"e2";"e3";"e4";"e5";"f1";"f2";"f3";"f4";"f5"];
 
@@ -3164,6 +3162,8 @@ switch (what)
         varargout{1} = C;
         
     case 'emg_reliability'
+        is_plot = 0;
+        vararginoptions(varargin,'is_plot');
         data = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
         subj = unique(data.sn);
         
@@ -3203,6 +3203,43 @@ switch (what)
         end
         varargout{1} = C;
         varargout{2} = emg_pattern;
+
+        % PLOTS:
+        if is_plot
+            avg_pattern = mean(cat(3, emg_pattern.pattern{:}), 3)';
+            % swap flexors and extensor electrodes location in matrix:
+            swap = avg_pattern(6:10,:);
+            avg_pattern(6:10,:) = avg_pattern(1:5,:);
+            avg_pattern(1:5,:) = swap;
+
+            % swap single finger flexion and extensions in matrix:
+            swap = avg_pattern(:,6:10);
+            avg_pattern(:,6:10) = avg_pattern(:,1:5);
+            avg_pattern(:,1:5) = swap;
+
+            fig = figure('Units','centimeters', 'Position',[15 15 20 14]);
+            pattern_1f = avg_pattern(:,[16,35,62,68]);
+            p = pcolor([[pattern_1f, zeros(size(pattern_1f,1),1)] ; zeros(1,size(pattern_1f,2)+1)]);
+            colormap('viridis')
+            clim([0 0.27])
+            colorbar
+            % plot settings:
+            set(p, 'EdgeColor', [0.2,0.2,0.2]);
+            set(gca,'YDir','reverse')
+            set(gca,'XTick', (1:size(pattern_1f,1))+0.5)
+            set(gca,'YTick', (1:size(pattern_1f,2))+0.5)
+            % axis square
+            % 
+            % xlabel('days','FontSize',my_font.conf_label)
+            % ylabel(['gooz'],'FontSize',my_font.conf_label)
+            % % ylabel([measure],'FontSize',my_font.tick_label)
+            % h = gca;
+            % h.YTick = linspace(h.YTick(1),h.YTick(end),3);
+            % h.XAxis.FontSize = my_font.conf_tick_label;
+            % h.YAxis.FontSize = my_font.conf_tick_label;
+            % h.LineWidth = conf.axis_width;
+            fontname("Arial")
+        end
 
     case 'force_reliability'
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -3422,5 +3459,4 @@ switch (what)
     otherwise
         error('The analysis you entered does not exist!')
 end
-
 
