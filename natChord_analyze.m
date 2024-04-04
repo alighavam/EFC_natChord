@@ -39,7 +39,8 @@ conf.line_width = 8;
 conf.marker_size = 350;
 conf.horz_line_width = 6;
 conf.axis_width = 3;
-conf.bar_width = 2.5;
+conf.bar_line_width = 2.5;
+conf.bar_width = 2;
 
 switch (what)
     case 'subject_routine'
@@ -2207,7 +2208,8 @@ switch (what)
         model_names = {'n_fing','n_fing+2fing','n_fing+emg_2channel_avg','n_fing+emg_2channel_avg+2fing'};
         model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
         conference_fig = 0;
-        vararginoptions(varargin,{'chords','measure','model_names','conference_fig'})
+        is_plot = 1;
+        vararginoptions(varargin,{'chords','measure','model_names','conference_fig','is_plot'})
         
         % loading data:
         chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -2318,74 +2320,75 @@ switch (what)
             r_sem(j) = std(r)/sqrt(length(r));
         end
 
-        if ~conference_fig
-            % PLOT - regression results:
-            figure;
-            ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
-            drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
-            plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
-            errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
-            scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
-            box off
-            h = gca;
-            % h.YTick = 0:0.25:1;
-            h.XTick = 1:length(model_names);
-            h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
-            h.XAxis.FontSize = my_font.tick_label;
-            h.YAxis.FontSize = my_font.tick_label;
-            ylabel('r','FontSize',my_font.ylabel)
-            % ylim([0, .85])
-            % h.YTick = 0:0.4:0.8;
-            ylim([0.6 1])
-            h.YTick = 0.6:0.2:1;
-            % h.YTickLabel = {'0','1'};
-            xlim([0.5,length(model_names)+0.5])
-            fontname("Arial")
-    
-    
-            % PLOT:
-            figure;
-            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-            ax1.PositionConstraint = "innerposition";
-            axes(ax1);
-            drawline(C.noise_ceil(1),'dir','horz','lim',[0,6],'linewidth',2,'color',[0.7 0.7 0.7],'linestyle',':'); hold on;
-            
-            N = length(C.r(strcmp(C.model,model_names{1})));
-            x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
-            y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{4}))];
-            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1); 
-            
-            ylim([0.6,1])
-            xlim([0,6])
-            h = gca;
-            h.XTick = [1.5 , 4.5];
-            h.YTick = 0.5:0.1:1;
-            h.XTickLabels = {'Additive','Additive+Interaction'};
-            h.XAxis.FontSize = my_font.xlabel;
-            h.YAxis.FontSize = my_font.tick_label;
-            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
-            fontname("Arial")
-        else
-            fig = figure('Units','centimeters', 'Position',[15 15 25 28]);
-            drawline(C.noise_ceil(1),'dir','horz','lim',[0,6.5],'linewidth',4,'color',[0.8 0.8 0.8],'linestyle',':'); hold on;
-            
-            N = length(C.r(strcmp(C.model,model_names{1})));
-            x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
-            y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{4}))];
-            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
-            
-            ylim([0.6,1])
-            xlim([0,6.5])
-            h = gca;
-            h.XTick = [1 , 2.5, 4, 5.5];
-            h.YTick = 0.5:0.1:1;
-            h.XTickLabels = {'Finger Count','+Natural Statistics','+Magnitude','All Together'};
-            h.XAxis.FontSize = my_font.conf_tick_label;
-            h.YAxis.FontSize = my_font.conf_tick_label;
-            h.LineWidth = conf.axis_width;
-            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
-            fontname("Arial")
-
+        if is_plot
+            if ~conference_fig
+                % PLOT - regression results:
+                figure;
+                ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
+                drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
+                plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
+                errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
+                scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
+                box off
+                h = gca;
+                % h.YTick = 0:0.25:1;
+                h.XTick = 1:length(model_names);
+                h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
+                h.XAxis.FontSize = my_font.tick_label;
+                h.YAxis.FontSize = my_font.tick_label;
+                ylabel('r','FontSize',my_font.ylabel)
+                % ylim([0, .85])
+                % h.YTick = 0:0.4:0.8;
+                ylim([0.6 1])
+                h.YTick = 0.6:0.2:1;
+                % h.YTickLabel = {'0','1'};
+                xlim([0.5,length(model_names)+0.5])
+                fontname("Arial")
+        
+        
+                % PLOT:
+                figure;
+                ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+                ax1.PositionConstraint = "innerposition";
+                axes(ax1);
+                drawline(C.noise_ceil(1),'dir','horz','lim',[0,6],'linewidth',2,'color',[0.7 0.7 0.7],'linestyle',':'); hold on;
+                
+                N = length(C.r(strcmp(C.model,model_names{1})));
+                x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
+                y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{4}))];
+                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1); 
+                
+                ylim([0.6,1])
+                xlim([0,6])
+                h = gca;
+                h.XTick = [1.5 , 4.5];
+                h.YTick = 0.5:0.1:1;
+                h.XTickLabels = {'Additive','Additive+Interaction'};
+                h.XAxis.FontSize = my_font.xlabel;
+                h.YAxis.FontSize = my_font.tick_label;
+                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
+                fontname("Arial")
+            else
+                fig = figure('Units','centimeters', 'Position',[15 15 25 28]);
+                drawline(C.noise_ceil(1),'dir','horz','lim',[0,6.5],'linewidth',4,'color',[0.8 0.8 0.8],'linestyle',':'); hold on;
+                
+                N = length(C.r(strcmp(C.model,model_names{1})));
+                x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
+                y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{4}))];
+                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
+                
+                ylim([0.6,1])
+                xlim([0,6.5])
+                h = gca;
+                h.XTick = [1 , 2.5, 4, 5.5];
+                h.YTick = 0.5:0.1:1;
+                h.XTickLabels = {'Finger Count','+Natural Statistics','+Magnitude','All Together'};
+                h.XAxis.FontSize = my_font.conf_tick_label;
+                h.YAxis.FontSize = my_font.conf_tick_label;
+                h.LineWidth = conf.axis_width;
+                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+                fontname("Arial")
+            end
         end
 
         varargout{1} = C;
@@ -2722,8 +2725,9 @@ switch (what)
     case 'emg_force_transform'
         coeff = []; % transform matrix if we want to project emg data to a certain coefficient.
         is_plot = 1;
-        vararginoptions(varargin,{'coeff','is_plot'})
-
+        conference_fig = 0;
+        vararginoptions(varargin,{'coeff','is_plot','conference_fig'})
+        
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         chords = data.chordID(data.sn==1 & data.sess==1);
@@ -2842,53 +2846,75 @@ switch (what)
         % fprintf('test if direction2emg > emg2direction: %.4f\n',p)
         
         if is_plot
-            % PLOT 1:
-            figure;
-            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-            ax1.PositionConstraint = "innerposition";
-            axes(ax1);
-            x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_m2f),1)] , [4*ones(length(C.R2_f2m_crossval),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
-            y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
-            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
-            lim_width = 0.4;
-            drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-    
-            ylim([0.5,1])
-            xlim([0,6])
-            h = gca;
-            h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
-            h.XAxis.FontSize = my_font.xlabel;
-            h.YAxis.FontSize = my_font.tick_label;
-            h.LineWidth = 2;
-            ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
-            fontname("Arial")
-    
-            % PLOT 2:
-            figure;
-            ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-            ax1.PositionConstraint = "innerposition";
-            axes(ax1);
-            x = [[ones(length(C.R_f2m),1) ; 2*ones(length(C.R_m2f),1)] , [4*ones(length(C.R_f2m_crossval),1) ; 5*ones(length(C.R_m2f_crossval),1)]];
-            y = [[C.R_f2m ; C.R_f2m_crossval] , [C.R_m2f ; C.R_m2f_crossval]];
-            [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
-            lim_width = 0.4;
-            drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
-            
-            ylim([0.5,1])
-            xlim([0,6])
-            h = gca;
-            h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
-            h.XAxis.FontSize = my_font.xlabel;
-            h.YAxis.FontSize = my_font.tick_label;
-            h.LineWidth = 2;
-            ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
-            fontname("Arial")
+            if ~ conference_fig
+                % PLOT 1:
+                figure;
+                ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+                ax1.PositionConstraint = "innerposition";
+                axes(ax1);
+                x = [[ones(length(C.R2_f2m),1) ; 2*ones(length(C.R2_m2f),1)] , [4*ones(length(C.R2_f2m_crossval),1) ; 5*ones(length(C.R2_m2f_crossval),1)]];
+                y = [[C.R2_f2m ; C.R2_f2m_crossval] , [C.R2_m2f ; C.R2_m2f_crossval]];
+                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
+                lim_width = 0.4;
+                drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(emg_rel.r2),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(force_rel.r2),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+        
+                ylim([0.5,1])
+                xlim([0,6])
+                h = gca;
+                h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+                h.XAxis.FontSize = my_font.xlabel;
+                h.YAxis.FontSize = my_font.tick_label;
+                h.LineWidth = 2;
+                ylabel('$\mathbf{R^2}$','interpreter','LaTex','FontSize',my_font.ylabel)
+                fontname("Arial")
+        
+                % PLOT 2:
+                figure;
+                ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
+                ax1.PositionConstraint = "innerposition";
+                axes(ax1);
+                x = [[ones(length(C.R_f2m),1) ; 2*ones(length(C.R_m2f),1)] , [4*ones(length(C.R_f2m_crossval),1) ; 5*ones(length(C.R_m2f_crossval),1)]];
+                y = [[C.R_f2m ; C.R_f2m_crossval] , [C.R_m2f ; C.R_m2f_crossval]];
+                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1,'gapwidth',[1,0,0,0]); 
+                lim_width = 0.4;
+                drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',2,'color',[0.85 0.85 0.85],'linestyle',':')
+                
+                ylim([0.5,1])
+                xlim([0,6])
+                h = gca;
+                h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+                h.XAxis.FontSize = my_font.xlabel;
+                h.YAxis.FontSize = my_font.tick_label;
+                h.LineWidth = 2;
+                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
+                fontname("Arial")
+            else
+                fig = figure('Units','centimeters', 'Position',[15 15 12 15]);
+                x = [ones(length(C.R_f2m),1) ; 2*ones(length(C.R_m2f),1)];
+                y = [C.R_f2m ; C.R_m2f];
+                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_line_width,'gapwidth',[0.5,0,0,0],'barwidth',1); 
+                lim_width = 0.5;
+                drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(1)-lim_width,x_coord(1)+lim_width],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+                drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(2)-lim_width,x_coord(2)+lim_width],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+                % drawline(mean(emg_rel.r),'dir','horz','lim',[x_coord(3)-lim_width,x_coord(3)+lim_width],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+                % drawline(mean(force_rel.r),'dir','horz','lim',[x_coord(4)-lim_width,x_coord(4)+lim_width],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+                % 
+                ylim([0,1])
+                % xlim([0,6])
+                h = gca;
+                h.XTickLabels = {'Force to EMG','EMG to Force','Force to EMG','EMG to Force'};
+                h.XAxis.FontSize = my_font.conf_label;
+                h.YAxis.FontSize = my_font.conf_tick_label;
+                h.LineWidth = conf.axis_width;
+                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+                fontname("Arial")
+            end
         end
 
     case 'forward_selection'
@@ -3455,7 +3481,45 @@ switch (what)
         ylim([0,105])
         ylabel('Variance Explained (%)')
         xlabel('Number of Dimensions')
+
+    case 'finger_count_explanation'
+        C_MD = natChord_analyze('model_testing_all_efc1','measure','MD','model_names',{'n_fing'},'is_plot',0);
+        C_RT = natChord_analyze('model_testing_all_efc1','measure','RT','model_names',{'n_fing'},'is_plot',0);
+        
+        x = [ones(length(C_MD.r),1)];
+        y = [C_MD.r];
+        fig = figure('Units','centimeters', 'Position',[15 15 12 24]);
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_line_width,'gapwidth',[0.5,0,0,0],'barwidth',1); 
+        ylim([0,1])
+        lim_width = 0.5;
+        drawline(mean(C_MD.noise_ceil),'dir','horz','lim',[0 2],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+        % xlim([0,6])
+        h = gca;
+        h.XTickLabels = {'Finger Count Model'};
+        h.XAxis.FontSize = my_font.conf_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.YTick = 0:0.2:1;
+        h.LineWidth = conf.axis_width;
+        ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+        fontname("Arial")
     
+        x = [ones(length(C_RT.r),1)];
+        y = [C_RT.r];
+        fig = figure('Units','centimeters', 'Position',[15 15 12 24]);
+        [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_line_width,'gapwidth',[0.5,0,0,0],'barwidth',1); 
+        ylim([0,1])
+        lim_width = 0.5;
+        drawline(mean(C_RT.noise_ceil),'dir','horz','lim',[0 2],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
+        % xlim([0,6])
+        h = gca;
+        h.YTick = 0:0.2:1;
+        h.XTickLabels = {'Finger Count Model'};
+        h.XAxis.FontSize = my_font.conf_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.LineWidth = conf.axis_width;
+        ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+        fontname("Arial")
+
     otherwise
         error('The analysis you entered does not exist!')
 end
