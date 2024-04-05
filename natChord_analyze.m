@@ -2734,7 +2734,8 @@ switch (what)
         coeff = []; % transform matrix if we want to project emg data to a certain coefficient.
         is_plot = 1;
         conference_fig = 0;
-        vararginoptions(varargin,{'coeff','is_plot','conference_fig'})
+        within_sess = 0;
+        vararginoptions(varargin,{'coeff','is_plot','conference_fig','within_sess'})
         
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -2754,11 +2755,16 @@ switch (what)
         for i = 1:length(emg_pattern.pattern)
             % average of in subjects:
             idx_in = setdiff(1:length(emg_pattern.pattern),i);
-            emg = 0;
-            force = 0;
-            for j = 1:length(idx_in)
-                emg = emg + emg_pattern.pattern{idx_in(j)}/length(idx_in);
-                force = force + force_pattern.pattern{idx_in(j)}/length(idx_in);
+            if ~within_sess
+                emg = 0;
+                force = 0;
+                for j = 1:length(idx_in)
+                    emg = emg + emg_pattern.pattern{idx_in(j)}/length(idx_in);
+                    force = force + force_pattern.pattern{idx_in(j)}/length(idx_in);
+                end
+            else
+                emg = emg_pattern.pattern{i};
+                force = force_pattern.pattern{i};
             end
             directions = make_design_matrix(chords,'additive');
             
@@ -3513,15 +3519,25 @@ switch (what)
         % ylabel('Variance Explained (%)')
         % xlabel('Number of Dimensions')
 
-    case 'PCA_emg_v02'
+    case 'PCA_emg_crippled'
         num_dim = 4;
-        vararginoptions(varargin,{'num_dim'})
+        project_to_chord = 0;
+        vararginoptions(varargin,{'num_dim','project_to_chord'})
         % load data:
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         chords = data.chordID(data.sn==1 & data.sess==1);
-
+        
         % get PCA coeffs:
         C_PCA = natChord_analyze('PCA_emg');
+        
+        % variance explained by PCs:
+        if ~project_to_chord
+            var1 = mean(sum(C_PCA.explained_nat(:,1:num_dim),2));
+            var2 = mean(sum(C_PCA.explained_nat(:,num_dim+1:end),2));
+        else
+            var1 = mean(sum(C_PCA.explained_chord(:,1:num_dim),2));
+            var2 = mean(sum(C_PCA.explained_chord(:,num_dim+1:end),2));
+        end
         
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
         [force_rel,force_pattern] = natChord_analyze('force_reliability');
@@ -3529,9 +3545,16 @@ switch (what)
         C = [];
         for i = 1:length(emg_pattern.pattern)
             emg = emg_pattern.pattern{i};
-            emg_proj = emg * C_PCA.coeff_nat{i}; % project EMG to natural PCs
-            emg_crippled01 = emg * C_PCA.coeff_nat{i}(:,1:num_dim);
-            emg_crippled02 = emg * C_PCA.coeff_nat{i}(:,num_dim+1:end);
+            if ~project_to_chord
+                emg_proj = emg * C_PCA.coeff_nat{i}; % project EMG to natural PCs
+                emg_crippled01 = emg * C_PCA.coeff_nat{i}(:,1:num_dim);
+                emg_crippled02 = emg * C_PCA.coeff_nat{i}(:,num_dim+1:end);
+            else
+                emg_proj = emg * C_PCA.coeff_chord{i}; % project EMG to chord PCs
+                emg_crippled01 = emg * C_PCA.coeff_chord{i}(:,1:num_dim);
+                emg_crippled02 = emg * C_PCA.coeff_chord{i}(:,num_dim+1:end);
+            end
+            
             force = force_pattern.pattern{i};
             
             % EMG to force linear mixture matrix:
@@ -3618,19 +3641,17 @@ switch (what)
         y = [C.R_m2f_crippled01 ; C.R_m2f_crippled02];
         [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_width); 
         drawline(mean(C.R_m2f),'dir','horz','lim',[0,3.5],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle',':')
-
+        
         ylim([0,1])
         xlim([0,3.5])
         h = gca;
-        h.XTickLabels = {num2str(mean(sum(C_PCA.explained_nat(:,1:num_dim),2)),'%.2f'),num2str(mean(sum(C_PCA.explained_nat(:,num_dim+1:end),2)),'%.2f')};
+        h.XTickLabels = {num2str(var1,'%.2f'),num2str(var2,'%.2f')};
         h.XAxis.FontSize = my_font.conf_tick_label;
         h.YAxis.FontSize = my_font.conf_tick_label;
         h.LineWidth = 2;
         ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
         fontname("Arial")
         
-
-
     case 'finger_count_explanation'
         C_MD = natChord_analyze('model_testing_all_efc1','measure','MD','model_names',{'n_fing'},'is_plot',0);
         C_RT = natChord_analyze('model_testing_all_efc1','measure','RT','model_names',{'n_fing'},'is_plot',0);
