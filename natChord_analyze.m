@@ -3388,7 +3388,7 @@ switch (what)
         end
 
     case 'PCA_emg'
-        sampling_option = 'whole_thresholded';
+        sampling_option = 'whole_sampled';
         num_dim = 4;
         vararginoptions(varargin,{'sampling_option','num_dim'});
         
@@ -3439,6 +3439,8 @@ switch (what)
                 tmp.explained_chord = explained_chord';
                 tmp.coeff_nat = {coeff_nat};
                 tmp.coeff_chord = {coeff_chord};
+                tmp.chord_pattern = {emg_pattern.pattern{emg_pattern.sn==subjects(sn) & emg_pattern.sess==sess(j)}};
+                tmp.natural_emg = {natural_emg};
                 C = addstruct(C,tmp,'row','force');
             end
         end
@@ -3544,18 +3546,55 @@ switch (what)
         
         C = [];
         for i = 1:length(emg_pattern.pattern)
+            emg_nat = C_PCA.natural_emg{i};
+            emg_nat = emg_nat - mean(emg_nat,1);
             emg = emg_pattern.pattern{i};
+            emg = emg - mean(emg,1);
             if ~project_to_chord
                 emg_proj = emg * C_PCA.coeff_nat{i}; % project EMG to natural PCs
+                emg_proj = emg_proj-mean(emg_proj,1); 
                 emg_crippled01 = emg * C_PCA.coeff_nat{i}(:,1:num_dim);
+                emg_crippled01 = emg_crippled01 - mean(emg_crippled01,1);
                 emg_crippled02 = emg * C_PCA.coeff_nat{i}(:,num_dim+1:end);
+                emg_crippled02 = emg_crippled02 - mean(emg_crippled02,1);
             else
-                emg_proj = emg * C_PCA.coeff_chord{i}; % project EMG to chord PCs
+                emg_proj = emg * C_PCA.coeff_chord{i}; % project EMG to natural PCs
+                emg_proj = emg_proj-mean(emg_proj,1); 
                 emg_crippled01 = emg * C_PCA.coeff_chord{i}(:,1:num_dim);
+                emg_crippled01 = emg_crippled01 - mean(emg_crippled01,1);
                 emg_crippled02 = emg * C_PCA.coeff_chord{i}(:,num_dim+1:end);
+                emg_crippled02 = emg_crippled02 - mean(emg_crippled02,1);s
             end
             
             force = force_pattern.pattern{i};
+            force = force - mean(force,1);
+
+            % measure the variance of EMG after projection on each eigen vector:
+            for j = 1:10
+                M = emg'*emg;
+                M_nat = emg_nat' * emg_nat;
+
+                total_var_chord = trace(M);
+                total_var_nat = trace(M_nat);
+
+                total_var_chord2nat = trace(C_PCA.coeff_nat{i}' * M * C_PCA.coeff_nat{i});
+                total_var_chord2chord = trace(C_PCA.coeff_chord{i}' * M * C_PCA.coeff_chord{i});
+
+                total_var_nat2nat = trace(C_PCA.coeff_nat{i}' * M_nat * C_PCA.coeff_nat{i});
+                total_var_nat2chord = trace(C_PCA.coeff_chord{i}' * M_nat * C_PCA.coeff_chord{i});
+                
+                tmp.var_chord2nat(1,j) = trace(C_PCA.coeff_nat{i}(:,j)' * M * C_PCA.coeff_nat{i}(:,j));
+                tmp.var_chord2chord(1,j) = trace(C_PCA.coeff_chord{i}(:,j)' * M * C_PCA.coeff_chord{i}(:,j));
+                
+                tmp.var_nat2nat(1,j) = trace(C_PCA.coeff_nat{i}(:,j)' * M_nat * C_PCA.coeff_nat{i}(:,j));
+                tmp.var_nat2chord(1,j) = trace(C_PCA.coeff_chord{i}(:,j)' * M_nat * C_PCA.coeff_chord{i}(:,j));
+            end
+            tmp.total_var_chord = total_var_chord;
+            tmp.total_var_nat = total_var_nat;
+            tmp.total_var_chord2nat = total_var_chord2nat;
+            tmp.total_var_chord2chord = total_var_chord2chord;
+            tmp.total_var_nat2nat = total_var_nat2nat;
+            tmp.total_var_nat2chord = total_var_nat2chord;
             
             % EMG to force linear mixture matrix:
             W = (emg' * emg)^-1 * emg' * force;
@@ -3635,7 +3674,7 @@ switch (what)
         end
         varargout{1} = C;
 
-        % PLOT:
+        % PLOT - Crippled Force Explanation:
         fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
         x = [ones(length(C.R_m2f_crippled01),1) ; 2*ones(length(C.R_m2f_crippled02),1)];
         y = [C.R_m2f_crippled01 ; C.R_m2f_crippled02];
@@ -3650,6 +3689,77 @@ switch (what)
         h.YAxis.FontSize = my_font.conf_tick_label;
         h.LineWidth = 2;
         ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
+        fontname("Arial")
+        
+        % PLOT - var explained by dimensions within chord and natural:
+        fig = figure('Units','centimeters', 'Position',[15 15 15 15]);
+        drawline(100,'dir','horz','lim',[0,11],'linewidth',4,'color',[0.8 0.8 0.8],'linestyle','-'); hold on;
+
+        x = repmat((1:10)',size(C_PCA.explained_nat,1),1);
+        y = C_PCA.explained_nat';
+        eig_sum = sum(y,1);
+        y = y./eig_sum;
+        y = cumsum(y,1)*100;
+        y = y(:);
+        lineplot(x,y,'markertype','o','markersize',5,'markerfill',colors_red(2,:),'markercolor',colors_red(2,:),'linecolor',colors_red(2,:),'linewidth',2,'errorcolor',colors_red(2,:)); hold on;
+
+        x = repmat((1:10)',size(C_PCA.explained_chord,1),1);        
+        y = C_PCA.explained_chord';
+        eig_sum = sum(y,1);
+        y = y./eig_sum;
+        y = cumsum(y,1)*100;
+        y = y(:);
+        lineplot(x,y,'markersize',5,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorcolor',colors_blue(5,:));
+        lgd = legend({'','natural','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','chord'});
+        xlim([0,11])
+        ylim([0,105])
+        ylabel('Variance Explained (%)')
+        xlabel('Number of Dimensions')
+
+        % PLOT - Projected Chord EMG Variance:
+        fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
+        x = kron([1:10]',ones(1,length(emg_pattern.pattern)));
+        x = x(:);
+        y = C.var_chord2chord'./C.total_var_chord' * 100;
+        y = y(:);
+        lineplot(x,y,'markersize',5,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorcolor',colors_blue(5,:)); 
+        hold on;
+        y = C.var_chord2nat'./C.total_var_chord' * 100;
+        y = y(:);
+        lineplot(x,y,'markertype','o','markersize',5,'markerfill',colors_red(2,:),'markercolor',colors_red(2,:),'linecolor',colors_red(2,:),'linewidth',2,'errorcolor',colors_red(2,:));
+        drawline(100,'dir','horz','lim',[0,11],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle','-')
+        
+        ylim([0,102])
+        xlim([0,11])
+        h = gca;
+        h.XAxis.FontSize = my_font.conf_tick_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.LineWidth = 2;
+        ylabel('%Var of Chord EMG','FontSize',my_font.conf_label)
+        xlabel('directions (sorted)','FontSize',my_font.conf_label)
+        fontname("Arial")
+
+        % PLOT - Projected Nat EMG Variance:
+        fig = figure('Units','centimeters', 'Position',[15 15 25 25]);
+        x = kron([1:10]',ones(1,length(emg_pattern.pattern)));
+        x = x(:);
+        y = C.var_nat2chord'./C.total_var_nat' * 100;
+        y = y(:);
+        lineplot(x,y,'markersize',5,'markerfill',colors_blue(5,:),'markercolor',colors_blue(5,:),'linecolor',colors_blue(5,:),'linewidth',2,'errorcolor',colors_blue(5,:)); 
+        hold on;
+        y = C.var_nat2nat'./C.total_var_nat' * 100;
+        y = y(:);
+        lineplot(x,y,'markertype','o','markersize',5,'markerfill',colors_red(2,:),'markercolor',colors_red(2,:),'linecolor',colors_red(2,:),'linewidth',2,'errorcolor',colors_red(2,:));
+        drawline(100,'dir','horz','lim',[0,11],'linewidth',4,'color',[0.85 0.85 0.85],'linestyle','-')
+        
+        ylim([0,102])
+        xlim([0,11])
+        h = gca;
+        h.XAxis.FontSize = my_font.conf_tick_label;
+        h.YAxis.FontSize = my_font.conf_tick_label;
+        h.LineWidth = 2;
+        ylabel('%Var of Natural EMG','FontSize',my_font.conf_label)
+        xlabel('directions (sorted)','FontSize',my_font.conf_label)
         fontname("Arial")
         
     case 'finger_count_explanation'
