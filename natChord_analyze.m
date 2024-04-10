@@ -342,7 +342,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4,7,15,17,11]'];
+        subject_mapping = [subjects , [1,5,2,4,7,15,17,11,8]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -3768,7 +3768,7 @@ switch (what)
         
         x = [ones(length(C_MD.r),1)];
         y = [C_MD.r];
-        fig = figure('Units','centimeters', 'Position',[15 15 12 24]);
+        fig = figure('Units','centimeters', 'Position',[15 15 12 17.5]);
         [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_line_width,'gapwidth',[0.5,0,0,0],'barwidth',1); 
         ylim([0,1])
         lim_width = 0.5;
@@ -3785,14 +3785,14 @@ switch (what)
     
         x = [ones(length(C_RT.r),1)];
         y = [C_RT.r];
-        fig = figure('Units','centimeters', 'Position',[15 15 12 24]);
+        fig = figure('Units','centimeters', 'Position',[15 15 12 17.5]);
         [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',conf.bar_line_width,'gapwidth',[0.5,0,0,0],'barwidth',1); 
         ylim([0,1])
         lim_width = 0.5;
         drawline(mean(C_RT.noise_ceil),'dir','horz','lim',[0 2],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':')
         % xlim([0,6])
         h = gca;
-        h.YTick = 0:0.2:1;
+        h.YTick = 0:0.5:1;
         h.XTickLabels = {'Finger Count Model'};
         h.XAxis.FontSize = my_font.conf_label;
         h.YAxis.FontSize = my_font.conf_tick_label;
