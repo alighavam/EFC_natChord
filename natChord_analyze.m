@@ -342,7 +342,7 @@ switch (what)
         ANA.MD_efc = zeros(size(ANA.MD));
         ANA.MT_efc = zeros(size(ANA.MD));
         ANA.RT_efc = zeros(size(ANA.MD));
-        subject_mapping = [subjects , [1,5,2,4,7,15,17,11,8]'];
+        subject_mapping = [subjects , [1,5,2,4,7,15,17,11,8,16]'];
         data_efc1 = dload(fullfile(project_path,'analysis','efc1_chord.tsv'));
         chords = unique(ANA.chordID);
         for i = 1:length(subjects)
@@ -351,9 +351,9 @@ switch (what)
                 subject_efc = subject_mapping(i,2);
                 tmp = getrow(data_efc1,data_efc1.sn==subject_efc & data_efc1.sess>=3 & data_efc1.chordID==chords(j));
                 
-                ANA.MD_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MD);
-                ANA.MT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MT);
-                ANA.RT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.RT);
+                ANA.MD_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MD,'omitmissing');
+                ANA.MT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.MT,'omitmissing');
+                ANA.RT_efc(ANA.sn==subjects(i) & ANA.chordID==chords(j)) = mean(tmp.RT,'omitmissing');
             end
         end
         
@@ -364,10 +364,7 @@ switch (what)
         data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
         
         % nSphere model:
-        [~,C] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
-        % tic
-        % [~,C] = natChord_analyze('nSphere_model','d_type','oval','lambda',0.05,'n_thresh',10,'sampling_option','whole_sampled','plot_option',0);
-        % toc
+        [C,~] = natChord_analyze('nSphere_model','d_type','project_to_nSphere','sampling_option','whole_thresholded','plot_option',0);
 
         data.log_slope = C.log_slope;
         data.log_slope_n = C.log_slope_n;
@@ -908,7 +905,7 @@ switch (what)
 
     case 'visualize_natural_emg'
         % handling input arguments:
-        sampling_option = 'whole_sampled';
+        sampling_option = 'whole_thresholded';
         subject_name = 'subj01';
         normalize_channels = 1;             % flag to whether normalize the channels by their norms or not.
         dimensions = [];                    % dimensions of the natural data to show. by default random dimensions are selected.
@@ -1000,19 +997,8 @@ switch (what)
             % mapping mean devs to colormap:
             c = map2color(chords_mean_dev, autumn);
             
-            % put avg chord patterns on the plot
-            if ica
-                pattern_transformed = transform(emg_dist.mdl{emg_dist.sess==sess & emg_dist.partition==part}, pattern);
-            end
-            
-            for j = 1:size(pattern_transformed,1)
-                % in case of single finger chords:
-                if (j <= 10)
-                    scatter3(pattern_transformed(j,dims(1)), pattern_transformed(j,dims(2)), pattern_transformed(j,dims(3)), 50, 'k', 'filled', 'HandleVisibility','off')
-                % in case of multi finger chords:
-                else
-                    scatter3(pattern_transformed(j,dims(1)), pattern_transformed(j,dims(2)), pattern_transformed(j,dims(3)), 50, 'filled', 'MarkerFaceColor', c(j,:))
-                end
+            for j = 1:size(pattern,1)
+                scatter3(pattern(j,dims(1)), pattern(j,dims(2)), pattern(j,dims(3)), 50, 'filled', 'MarkerFaceColor', c(j,:))
             end
 
             % legend(num2str(chords(11:end)))
@@ -1406,9 +1392,9 @@ switch (what)
             end
         end
 
-        varargout{1} = corr_struct;
-        varargout{2} = C;
-        
+        varargout{1} = C;
+        varargout{2} = corr_struct;
+
 
     case 'chord_distance_RDM'
         num_fingers = [];
@@ -2203,13 +2189,13 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
-        model_names = {'n_fing+additive','n_fing+force_avg','n_fing+additive+2fing','n_fing+force_avg+force_2fing'};
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
-        model_names = {'n_fing','n_fing+2fing','n_fing+emg_2channel_avg','n_fing+emg_2channel_avg+2fing'};
-        model_names = {'n_fing','n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'};
-        conference_fig = 0;
-        is_plot = 1;
-        vararginoptions(varargin,{'chords','measure','model_names','conference_fig','is_plot'})
+        model_names = {'n_fing','n_fing+additive','n_fing+all_2fing','n_fing+additive+all_2fing',... % behavioural models
+                       'n_fing+force_avg','n_fing+force_2fing','n_fing+force_avg+force_2fing',... % force models
+                       'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+emg_additive_avg+emg_2channel_avg',... % EMG models
+                       'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'}; % inference models
+        base_models = {'n_fing','additive','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
+                       'nSphere_avg','magnitude_avg'};
+        vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
         chords_natChord = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
@@ -2229,9 +2215,6 @@ switch (what)
             % missed all 5 repetitions in one session:
             values(:,i) = mean([values_tmp(data.sess==sess(1) & data.sn==subj(i)),values_tmp(data.sess==sess(2) & data.sn==subj(i))],2,'omitmissing');
         end
-
-        [R,R2] = crossval_reliability(values);
-        noise_ceil = mean(R);
 
         % modelling the difficulty for chords
         C = [];
@@ -2274,11 +2257,37 @@ switch (what)
                 C_tmp.stats = {STATS};
                 C_tmp.r = r;
                 C_tmp.r2 = r2;
-                C_tmp.noise_ceil = noise_ceil;
 
                 C = addstruct(C,C_tmp,'row',1);
             end
         end
+
+        [R,R2] = crossval_reliability(values);
+        noise_ceil = mean(R);
+
+        C.R_ceil = repmat(R,length(model_names),1);
+        C.R2_ceil = repmat(R2,length(model_names),1);
+
+        % analysis dataframe:
+        df = [];
+        df.sn_out = C.sn_out;
+        df.r = C.r;
+        df.r2 = C.r2;
+        df.r_ceil = C.R_ceil;
+        df.r2_ceil = C.R2_ceil;
+        % make flat strcture for models:
+        for i = 1:length(base_models)
+            df.(base_models{i}) = zeros(length(df.sn_out),1);
+        end
+        % fill the model name rows in the df:
+        for i = 1:length(model_names)
+            rows = strcmp(C.model,model_names{i});
+            split_model_names = strsplit(model_names{i},'+');
+            for j = 1:length(split_model_names)
+                df.(split_model_names{j})(rows) = 1;
+            end
+        end
+        dsave(fullfile(project_path,'analysis',['emg_models_' measure '.tsv']),df);
         
         % stats between models:
         stats = [];
@@ -2294,106 +2303,9 @@ switch (what)
                 stats = addstruct(stats,tmp,'row',1);
             end
         end
-
-
-        % getting noise ceiling:
-        % [~,corr_struct] = efc1_analyze('selected_chords_reliability','blocks',[(sess(1)-1)*12+1 sess(2)*12],'chords',chords,'plot_option',0);
-        % if (strcmp(measure,'MD'))
-        %     noise_ceil = mean(corr_struct.MD);
-        % elseif (strcmp(measure,'MT'))
-        %     noise_ceil = mean(corr_struct.MT);
-        % else
-        %     noise_ceil = mean(corr_struct.RT);
-        % end
-
-        for i = 1:length(model_names)
-            r = C.r(strcmp(C.model,model_names{i}));
-            fprintf('ttest: model %s different from noise ceiling:\n',model_names{i})
-            ttest(r-noise_ceil,[],2,'onesample')
-        end
-
-        for j = 1:length(model_names)
-            % getting cross validated r:
-            r = C.r(strcmp(C.model,model_names{j}));
-            
-            r_avg(j) = mean(r);
-            r_sem(j) = std(r)/sqrt(length(r));
-        end
-
-        if is_plot
-            if ~conference_fig
-                % PLOT - regression results:
-                figure;
-                ax1 = axes('Units', 'centimeters', 'Position', [3 3 3.5 3],'Box','off');
-                drawline(noise_ceil,'dir','horz','color',[0.7 0.7 0.7],'lim',[0,length(model_names)+1],'linestyle',':','linewidth',2); hold on;
-                plot(1:length(model_names),r_avg,'LineWidth',2,'Color',[0.1 0.1 0.1,0.1]);
-                errorbar(1:length(model_names),r_avg,r_sem,'LineStyle','none','Color',[0.1 0.1 0.1],'CapSize',0)
-                scatter(1:length(model_names),r_avg,15,'filled','MarkerFaceColor',[0.1 0.1 0.1],'MarkerEdgeColor',[0.1 0.1 0.1]);
-                box off
-                h = gca;
-                % h.YTick = 0:0.25:1;
-                h.XTick = 1:length(model_names);
-                h.XTickLabel = cellfun(@(x) replace(x,'_',' '),model_names,'uniformoutput',false);
-                h.XAxis.FontSize = my_font.tick_label;
-                h.YAxis.FontSize = my_font.tick_label;
-                ylabel('r','FontSize',my_font.ylabel)
-                % ylim([0, .85])
-                % h.YTick = 0:0.4:0.8;
-                ylim([0.6 1])
-                h.YTick = 0.6:0.2:1;
-                % h.YTickLabel = {'0','1'};
-                xlim([0.5,length(model_names)+0.5])
-                fontname("Arial")
-        
-        
-                % PLOT:
-                figure;
-                ax1 = axes('Units', 'centimeters', 'Position', [2 2 4.8 5],'Box','off');
-                ax1.PositionConstraint = "innerposition";
-                axes(ax1);
-                drawline(C.noise_ceil(1),'dir','horz','lim',[0,6],'linewidth',2,'color',[0.7 0.7 0.7],'linestyle',':'); hold on;
-                
-                N = length(C.r(strcmp(C.model,model_names{1})));
-                x = [ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1) ; 4*ones(N,1)];
-                y = [C.r(strcmp(C.model,model_names{1})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{4}))];
-                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',1); 
-                
-                ylim([0.6,1])
-                xlim([0,6])
-                h = gca;
-                h.XTick = [1.5 , 4.5];
-                h.YTick = 0.5:0.1:1;
-                h.XTickLabels = {'Additive','Additive+Interaction'};
-                h.XAxis.FontSize = my_font.xlabel;
-                h.YAxis.FontSize = my_font.tick_label;
-                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.ylabel)
-                fontname("Arial")
-            else
-                fig = figure('Units','centimeters', 'Position',[15 15 20 22]);
-                drawline(C.noise_ceil(1),'dir','horz','lim',[0,6.5],'linewidth',conf.horz_line_width,'color',[0.8 0.8 0.8],'linestyle',':'); hold on;
-                
-                N = length(C.r(strcmp(C.model,model_names{1})));
-                x = [1*ones(N,1) ; 2*ones(N,1) ; 3*ones(N,1)];
-                y = [C.r(strcmp(C.model,model_names{2})) ; C.r(strcmp(C.model,model_names{3})) ; C.r(strcmp(C.model,model_names{4}))];
-                [x_coord,~,~] = barplot(x,y,'capwidth',0.1,'linewidth',4); 
-                
-                r_finger_count = mean(C.r(strcmp(C.model,model_names{1})));
-                ylim([r_finger_count,0.89])
-                xlim([0,5.5])
-                h = gca;
-                h.XTick = [1 , 2.5, 4, 5.5];
-                h.YTick = [0.8 0.87];
-                h.XTickLabels = {'Natural Statistics','Magnitude','Natural + Magnitude'};
-                h.XAxis.FontSize = my_font.conf_tick_label;
-                h.YAxis.FontSize = my_font.conf_tick_label;
-                h.LineWidth = conf.axis_width;
-                ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
-                fontname("Arial")
-            end
-        end
-        
         varargout{1} = C;
         varargout{2} = stats;
+
 
     case 'model_testing_learning_slope_efc1'
         % handling input arguments:
@@ -3800,7 +3712,407 @@ switch (what)
         ylabel('$\mathbf{R}$','interpreter','LaTex','FontSize',my_font.conf_label)
         fontname("Arial")
 
+    case 'PCA_natural'
+        sampling_option = 'whole_sampled';
+        vararginoptions(varargin,{'sampling_option'});
+        % loading data:
+        [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
 
+        chords = data.chordID(data.sn==1 & data.sess==1);
+        subjects = unique(data.sn);
+
+        % tranforming subject numbers to subject names:
+        subject_names = strcat('subj',num2str(subjects,'%02.f'));
+
+        % define dataframe:
+        C = [];
+        % loop on subj:
+        for sn = 1:length(subjects)
+            % natural EMG file name:
+            file_name = fullfile(project_path, 'analysis', ['natChord_' subject_names(sn,:) '_emg_natural_' sampling_option '.mat']);
+            
+            % loading natural EMG dists:
+            emg_dist = load(file_name);
+            emg_dist = emg_dist.emg_natural_dist;
+            
+            sess = unique(data.sess(data.sn == subjects(sn)));
+            % loop on subject sessions:
+            for j = 1:length(sess)
+                % scaling factors:
+                scales = get_emg_scales(subjects(sn),sess(j));
+                
+                emg_dist_sess = getrow(emg_dist,emg_dist.sess==sess(j));
+                % normalizing the natural EMGs:
+                for i = 1:length(emg_dist_sess.dist)
+                    emg_dist_sess.dist{i} = (emg_dist_sess.dist{i} ./ scales);
+                end
+                
+                % PCA of half-half natural data:
+                half_idx = [[1,3,5,7,9] ; [2,4,6,8,10]];
+                for h = 1:2
+                    the_half = half_idx(h,:);
+                    natural_emg = vertcat(emg_dist_sess.dist{the_half});
+                    [coeff_nat, score_nat, eigenvalues_nat, ~, explained_nat] = pca(natural_emg);
+                    tmp.sn = subjects(sn);
+                    tmp.sess = sess(j);
+                    tmp.half = h;
+                    tmp.explained_nat = explained_nat';
+                    tmp.coef_nat = {coeff_nat};
+                    tmp.natural_dist = {natural_emg};
+                    C = addstruct(C,tmp,'row','force');
+                end
+            end
+        end
+        save(fullfile(project_path,'analysis','natural_pca.mat'),"C");
+        varargout{1} = C;
+        
+    case 'natural_PC_explanation'
+        C = load(fullfile(project_path,'analysis','natural_pca.mat')).C;
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        
+        subj = unique(C.sn);
+        halves  = unique(C.half);
+
+        ANA = [];
+        % loop on subj:
+        for i = 1:length(subj)
+            % loop on sess:
+            sess = unique(C.sess(C.sn==subj(i)));
+            for j = 1:length(sess)
+                % loop on halves:
+                for k = 1:length(halves)
+                    % get the coefs:
+                    row_C = C.sn==subj(i) & C.sess==sess(j) & C.half==halves(k);
+                    coef = C.coef_nat{row_C};
+                    row_data = data.sn==subj(i) & data.sess==sess(j);
+
+                    % get the chord emg patterns:
+                    emg = [data.emg_hold_avg_e1(row_data),data.emg_hold_avg_e2(row_data),data.emg_hold_avg_e3(row_data),data.emg_hold_avg_e4(row_data),data.emg_hold_avg_e5(row_data),...
+                           data.emg_hold_avg_f1(row_data),data.emg_hold_avg_f2(row_data),data.emg_hold_avg_f3(row_data),data.emg_hold_avg_f4(row_data),data.emg_hold_avg_f5(row_data)];
+                    scales = get_emg_scales(subj(i),sess(j));
+                    emg = emg ./ scales;
+                    emg = emg - mean(emg,1);
+                    M = emg'*emg;
+                    emg_var = trace(M);
+                    
+                    % get natural EMG from the other half:
+                    emg_nat = C.natural_dist{C.sn==subj(i) & C.sess==sess(j) & C.half==(3-halves(k))};
+                    emg_nat = emg_nat - mean(emg_nat,1);
+                    nat = emg_nat' * emg_nat;
+                    nat_var = trace(nat);
+
+                    % get projected to PC variance:
+                    for i_pc = 1:size(coef,2)
+                        var_chord2nat = trace(coef(:,i_pc)' * M * coef(:,i_pc));
+                        var_nat2nat = trace(coef(:,i_pc)' * nat * coef(:,i_pc));
+                        
+                        tmp_df.sn = subj(i);
+                        tmp_df.sess = sess(j);
+                        tmp_df.half = halves(k);
+                        tmp_df.PC = i_pc;
+                        tmp_df.nat_explained = var_nat2nat / nat_var * 100;
+                        tmp_df.chord_explained = var_chord2nat / emg_var * 100;
+                        ANA = addstruct(ANA,tmp_df,'row','force');
+                    end
+                end
+            end
+        end
+        dsave(fullfile(project_path,'analysis','natChord_pca.tsv'),ANA);
+        varargout{1} = ANA;
+
+    case 'pca_impaired_model'
+        C = load(fullfile(project_path,'analysis','natural_pca.mat')).C;
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        
+        subj = unique(C.sn);
+        halves  = unique(C.half);
+
+        ANA = [];
+        % num dimensions to run the emg->force transform:
+        dim = 1:size(C.coef_nat{1},2);
+        % loop on subj:
+        for i = 1:length(subj)
+            % loop on sess:
+            sess = unique(C.sess(C.sn==subj(i)));
+            for j = 1:length(sess)
+                % loop on halves:
+                for k = 1:length(halves)
+                    % get the coefs:
+                    row_C = C.sn==subj(i) & C.sess==sess(j) & C.half==halves(k);
+                    row_data = data.sn==subj(i) & data.sess==sess(j);
+                    coef = C.coef_nat{row_C};
+
+                    % get the chord emg patterns:
+                    emg = [data.emg_hold_avg_e1(row_data),data.emg_hold_avg_e2(row_data),data.emg_hold_avg_e3(row_data),data.emg_hold_avg_e4(row_data),data.emg_hold_avg_e5(row_data),...
+                           data.emg_hold_avg_f1(row_data),data.emg_hold_avg_f2(row_data),data.emg_hold_avg_f3(row_data),data.emg_hold_avg_f4(row_data),data.emg_hold_avg_f5(row_data)];
+                    scales = get_emg_scales(subj(i),sess(j));
+                    emg = emg ./ scales;
+                    emg = emg - mean(emg,1);
+                    M = emg'*emg;
+                    emg_var = trace(M);
+
+                    % get the force pattern:
+                    % differential forces (force_i = ext_i - flex_i):
+                    diff_force = [data.diff_force_f1(row_data),...
+                                  data.diff_force_f2(row_data),...
+                                  data.diff_force_f3(row_data),...
+                                  data.diff_force_f4(row_data),...
+                                  data.diff_force_f5(row_data)];
+                    % making a 10-D force pattern from the differential:
+                    force = [diff_force,diff_force];
+                    for col = 1:5
+                        force(force(:,col)<0,col) = 0;
+                        force(force(:,col+5)>0,col+5) = 0;
+                    end
+                    force(:,6:10) = force(:,6:10)*-1;
+                    force = force - mean(force,1);
+                    
+                    % get natural EMG from the other half:
+                    emg_nat = C.natural_dist{C.sn==subj(i) & C.sess==sess(j) & C.half==(3-halves(k))};
+                    emg_nat = emg_nat - mean(emg_nat,1);
+                    nat = emg_nat' * emg_nat;
+                    nat_var = trace(nat);
+
+                    % running the crippled models:
+                    for i_dim = 1:length(dim)
+                        % define the dimensions:
+                        dim1 = dim(1:i_dim);
+                        if (i_dim ~= length(dim))
+                            dim2 = dim(i_dim+1:end);
+                        else
+                            dim2 = [];
+                        end
+
+                        % variance calculations:
+                        var_nat1 = trace(coef(:,dim1)' * nat * coef(:,dim1)) / nat_var * 100;
+                        var_chord1 = trace(coef(:,dim1)' * M * coef(:,dim1)) / emg_var * 100;
+                        if ~isempty(dim2)
+                            var_nat2 = trace(coef(:,dim2)' * nat * coef(:,dim2)) / nat_var * 100;
+                            var_chord2 = trace(coef(:,dim2)' * M * coef(:,dim2)) / emg_var * 100;
+                        else
+                            var_nat2 = 0;
+                            var_chord2 = 0;
+                        end
+
+                        % force prediction:
+                        emg_crippled01 = emg * coef(:,dim1);
+                        emg_crippled01 = emg_crippled01 - mean(emg_crippled01,1);
+                        % linear regression:
+                        W_crippled01 = (emg_crippled01' * emg_crippled01)^-1 * emg_crippled01' * force;
+                        % reconstruct the force:
+                        force_pred_crippled01 = emg_crippled01 * W_crippled01;
+                        % calculate reconstruction performance:
+                        R2_crippled01 = mean(1 - sum((force_pred_crippled01-force).^2,1) ./ sum(force.^2,1));
+                        R_crippled01 = corr(force_pred_crippled01(:),force(:));
+
+                        if ~isempty(dim2)
+                            emg_crippled02 = emg * coef(:,dim2);
+                            emg_crippled02 = emg_crippled02 - mean(emg_crippled02,1);
+                            W_crippled02 = (emg_crippled02' * emg_crippled02)^-1 * emg_crippled02' * force;
+                            force_pred_crippled02 = emg_crippled02 * W_crippled02;
+                            R2_crippled02 = mean(1 - sum((force_pred_crippled02-force).^2,1) ./ sum(force.^2,1));
+                            R_crippled02 = corr(force_pred_crippled02(:),force(:));
+                        else
+                            R2_crippled02 = 0;
+                            R_crippled02 = 0;
+                        end
+                        tmp_df.sn = subj(i);
+                        tmp_df.sess = sess(j);
+                        tmp_df.half = halves(k);
+                        tmp_df.dim1 = length(dim1);
+                        tmp_df.dim2 = length(dim2);
+                        tmp_df.nat_explained1 = var_nat1;
+                        tmp_df.nat_explained2 = var_nat2;
+                        tmp_df.chord_explained1 = var_chord1;
+                        tmp_df.chord_explained2 = var_chord2;
+                        tmp_df.r_force1 = R_crippled01;
+                        tmp_df.r_force2 = R_crippled02;
+                        tmp_df.r2_force1 = R2_crippled01;
+                        tmp_df.r2_force2 = R2_crippled02;
+                        ANA = addstruct(ANA,tmp_df,'row','force');
+                    end
+                end
+            end
+        end
+        dsave(fullfile(project_path,'analysis','natChord_impaired_model.tsv'),ANA);
+        varargout{1} = ANA;
+
+    case 'pca_impaired_model_crossvall'
+        C = load(fullfile(project_path,'analysis','natural_pca.mat')).C;
+        data = dload(fullfile(project_path,'analysis','natChord_chord.tsv'));
+        chords = data.chordID(data.sn==1 & data.sess==1);
+
+        subj = unique(C.sn);
+        halves  = unique(C.half);
+        
+        ANA = [];
+        % num dimensions to run the emg->force transform:
+        dim = 1:size(C.coef_nat{1},2);
+        % loop on subj:
+        for i = 1:length(subj)
+            % loop on sess:
+            sess = unique(C.sess(C.sn==subj(i)));
+            for j = 1:length(sess)
+                % loop on halves:
+                for k = 1:length(halves)
+                    % get the coefs:
+                    row_C = C.sn==subj(i) & C.sess==sess(j) & C.half==halves(k);
+                    row_data = data.sn==subj(i) & data.sess==sess(j);
+                    coef = C.coef_nat{row_C};
+
+                    % get the chord emg patterns:
+                    emg = [data.emg_hold_avg_e1(row_data),data.emg_hold_avg_e2(row_data),data.emg_hold_avg_e3(row_data),data.emg_hold_avg_e4(row_data),data.emg_hold_avg_e5(row_data),...
+                           data.emg_hold_avg_f1(row_data),data.emg_hold_avg_f2(row_data),data.emg_hold_avg_f3(row_data),data.emg_hold_avg_f4(row_data),data.emg_hold_avg_f5(row_data)];
+                    scales = get_emg_scales(subj(i),sess(j));
+                    emg = emg ./ scales;
+                    emg = emg - mean(emg,1);
+                    M = emg'*emg;
+                    emg_var = trace(M);
+
+                    % get the force pattern:
+                    % differential forces (force_i = ext_i - flex_i):
+                    diff_force = [data.diff_force_f1(row_data),...
+                                  data.diff_force_f2(row_data),...
+                                  data.diff_force_f3(row_data),...
+                                  data.diff_force_f4(row_data),...
+                                  data.diff_force_f5(row_data)];
+                    % making a 10-D force pattern from the differential:
+                    force = [diff_force,diff_force];
+                    for col = 1:5
+                        force(force(:,col)<0,col) = 0;
+                        force(force(:,col+5)>0,col+5) = 0;
+                    end
+                    force(:,6:10) = force(:,6:10)*-1;
+                    force = force - mean(force,1);
+                    
+                    % get natural EMG from the other half:
+                    emg_nat = C.natural_dist{C.sn==subj(i) & C.sess==sess(j) & C.half==(3-halves(k))};
+                    emg_nat = emg_nat - mean(emg_nat,1);
+                    nat = emg_nat' * emg_nat;
+                    nat_var = trace(nat);
+
+                    % running the crippled models:
+                    for i_dim = 1:length(dim)-1
+                        % define the dimensions:
+                        dim1 = dim(1:i_dim);
+                        dim2 = dim(i_dim+1:end);
+
+                        % variance calculations:
+                        var_nat1 = trace(coef(:,dim1)' * nat * coef(:,dim1)) / nat_var * 100;
+                        var_chord1 = trace(coef(:,dim1)' * M * coef(:,dim1)) / emg_var * 100;
+                        var_nat2 = trace(coef(:,dim2)' * nat * coef(:,dim2)) / nat_var * 100;
+                        var_chord2 = trace(coef(:,dim2)' * M * coef(:,dim2)) / emg_var * 100;
+                        
+                        % impaired EMGs:
+                        emg_crippled01 = emg * coef(:,dim1);
+                        emg_crippled01 = emg_crippled01 - mean(emg_crippled01,1);
+
+                        emg_crippled02 = emg * coef(:,dim2);
+                        emg_crippled02 = emg_crippled02 - mean(emg_crippled02,1);
+                            
+                        % cross-validated force prediction with the
+                        % impaired models:
+                        F_crossval_crippled01 = zeros(size(force));
+                        F_crossval_crippled02 = zeros(size(force));
+                        for ch = 1:length(chords)
+                            % remove one chord from the train matrices:
+                            emg_reduced_crippled01 = emg_crippled01(setdiff(1:length(chords),ch),:);
+                            emg_reduced_crippled02 = emg_crippled02(setdiff(1:length(chords),ch),:);
+                            force_reduced = force(setdiff(1:length(chords),ch),:);
+                        
+                            % EMG to force linear mixture matrix:
+                            W_crippled01 = (emg_reduced_crippled01' * emg_reduced_crippled01)^-1 * emg_reduced_crippled01' * force_reduced;
+                            W_crippled02 = (emg_reduced_crippled02' * emg_reduced_crippled02)^-1 * emg_reduced_crippled02' * force_reduced;
+            
+                            % add predictions to the corresponding matrices:
+                            force_pred_crippled01 = emg_crippled01(ch,:)*W_crippled01;
+                            force_pred_crippled02 = emg_crippled02(ch,:)*W_crippled02;
+                            
+                            F_crossval_crippled01(ch,:) = force_pred_crippled01;
+                            F_crossval_crippled02(ch,:) = force_pred_crippled02;
+                        end
+                        
+                        % evaluate the model performance:
+                        R2_crippled01 = mean(1 - sum((F_crossval_crippled01-force).^2,1) ./ sum(force.^2,1));
+                        R_crippled01 = corr(F_crossval_crippled01(:),force(:));  
+            
+                        R2_crippled02 = mean(1 - sum((F_crossval_crippled02-force).^2,1) ./ sum(force.^2,1));
+                        R_crippled02 = corr(F_crossval_crippled02(:),force(:));  
+
+                        tmp_df.sn = subj(i);
+                        tmp_df.sess = sess(j);
+                        tmp_df.half = halves(k);
+                        tmp_df.dim1 = length(dim1);
+                        tmp_df.dim2 = length(dim2);
+                        tmp_df.nat_explained1 = var_nat1;
+                        tmp_df.nat_explained2 = var_nat2;
+                        tmp_df.chord_explained1 = var_chord1;
+                        tmp_df.chord_explained2 = var_chord2;
+                        tmp_df.r_force1 = R_crippled01;
+                        tmp_df.r_force2 = R_crippled02;
+                        tmp_df.r2_force1 = R2_crippled01;
+                        tmp_df.r2_force2 = R2_crippled02;
+                        ANA = addstruct(ANA,tmp_df,'row','force');
+                    end
+
+                    % running the full model:
+                    dim1 = dim(1:10);
+                    dim2 = [];
+
+                    % variance calculations:
+                    var_nat1 = trace(coef(:,dim1)' * nat * coef(:,dim1)) / nat_var * 100;
+                    var_chord1 = trace(coef(:,dim1)' * M * coef(:,dim1)) / emg_var * 100;
+                    var_nat2 = 0;
+                    var_chord2 = 0;
+                    
+                    % impaired EMGs:
+                    emg_crippled01 = emg * coef(:,dim1);
+                    emg_crippled01 = emg_crippled01 - mean(emg_crippled01,1);
+                        
+                    % cross-validated force prediction with the
+                    % impaired models:
+                    F_crossval_crippled01 = zeros(size(force));
+                    for ch = 1:length(chords)
+                        % remove one chord from the train matrices:
+                        emg_reduced_crippled01 = emg_crippled01(setdiff(1:length(chords),ch),:);
+                        force_reduced = force(setdiff(1:length(chords),ch),:);
+                    
+                        % EMG to force linear mixture matrix:
+                        W_crippled01 = (emg_reduced_crippled01' * emg_reduced_crippled01)^-1 * emg_reduced_crippled01' * force_reduced;
+        
+                        % add predictions to the corresponding matrices:
+                        force_pred_crippled01 = emg_crippled01(ch,:)*W_crippled01;
+                        
+                        F_crossval_crippled01(ch,:) = force_pred_crippled01;
+                    end
+                    
+                    % evaluate the model performance:
+                    R2_crippled01 = mean(1 - sum((F_crossval_crippled01-force).^2,1) ./ sum(force.^2,1));
+                    R_crippled01 = corr(F_crossval_crippled01(:),force(:));  
+        
+                    R2_crippled02 = 0;
+                    R_crippled02 = 0;
+
+                    tmp_df.sn = subj(i);
+                    tmp_df.sess = sess(j);
+                    tmp_df.half = halves(k);
+                    tmp_df.dim1 = length(dim1);
+                    tmp_df.dim2 = length(dim2);
+                    tmp_df.nat_explained1 = var_nat1;
+                    tmp_df.nat_explained2 = var_nat2;
+                    tmp_df.chord_explained1 = var_chord1;
+                    tmp_df.chord_explained2 = var_chord2;
+                    tmp_df.r_force1 = R_crippled01;
+                    tmp_df.r_force2 = R_crippled02;
+                    tmp_df.r2_force1 = R2_crippled01;
+                    tmp_df.r2_force2 = R2_crippled02;
+                    ANA = addstruct(ANA,tmp_df,'row','force');
+                end
+            end
+        end
+        dsave(fullfile(project_path,'analysis','natChord_impaired_model_crossval.tsv'),ANA);
+        varargout{1} = ANA;
 
     otherwise
         error('The analysis you entered does not exist!')
