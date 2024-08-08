@@ -72,7 +72,7 @@ def gen_chords(chords, column_names, nChunks, nRep, subNum, planTime, execMaxTim
     np.random.shuffle(chords_set2)
 
     # dividing chords into runs:
-    nRuns = 10 # number of runs to divide. the value is arbitrary. I just selected in a way that the number of chords is dividable by this number and the runs are not too long.
+    nRuns = 8 # number of runs to divide. the value is arbitrary. I just selected in a way that the number of chords is dividable by this number and the runs are not too long.
     divisions = np.split(chords, nRuns)
     divisions_set2 = np.split(chords_set2, nRuns)
 
@@ -118,13 +118,14 @@ single_finger_chords = [] # empty list of single finger chords
 chords = [] # empty list of chords
 # single_finger_chords.extend(np.unique(list(itertools.permutations([1,9,9,9,9])), axis=0).tolist()) # single finger extensions
 # single_finger_chords.extend(np.unique(list(itertools.permutations([2,9,9,9,9])), axis=0).tolist()) # single finger flexions
-chords.extend([[1,9,9,9,9],[9,1,9,9,9],[9,9,1,9,9],[9,9,9,1,9],[9,9,9,9,1],[2,9,9,9,9],[9,2,9,9,9],[9,9,2,9,9],[9,9,9,2,9],[9,9,9,9,2]])  # single finger chords
-chords.extend([[9,2,2,2,9],[1,2,2,9,9],[2,9,2,2,9],[9,2,1,2,9],[9,9,2,2,2],[2,1,1,9,9],[2,9,1,2,9],[9,1,1,1,9],[9,1,1,2,9],[1,1,1,9,9]])  # 3-finger chords easy
-chords.extend([[1,1,1,1,1],[2,1,1,1,1],[2,2,2,2,2],[1,2,2,2,2],[2,1,1,1,2],[2,1,1,2,2],[2,2,2,2,1],[1,1,1,1,2],[1,1,1,2,2],[1,2,2,2,1]])  # 5-finger chords easy
-chords.extend([[9,2,2,1,9],[1,9,2,9,1],[2,2,9,1,9],[2,1,9,9,2],[2,2,9,2,9],[9,1,9,1,1],[9,2,9,1,1],[2,9,2,1,9],[2,9,9,1,2],[9,1,1,9,2]])  # 3-finger chords med
-chords.extend([[1,1,2,2,2],[2,1,2,2,1],[1,1,2,2,1],[1,2,1,1,2],[1,2,2,1,1],[2,1,2,1,1],[2,2,1,1,1],[2,2,1,2,1],[2,2,2,1,1],[1,1,1,2,2]])  # 5-finger chords med
-chords.extend([[9,1,9,1,2],[1,9,1,9,2],[2,9,1,9,1],[9,1,1,9,1],[9,1,2,9,2],[9,2,9,1,2],[1,1,9,1,9],[9,2,1,9,1],[9,1,2,1,9],[9,1,9,2,1]])  # 3-finger chords diff
-chords.extend([[1,1,2,1,2],[1,2,1,2,2],[1,1,2,1,1],[1,2,2,1,2],[2,1,2,1,2],[2,2,2,1,2],[1,1,1,2,1],[2,1,1,2,1],[1,2,1,1,1],[1,2,1,1,2]])  # 5-finger chords diff
+# chords.extend([[1,9,9,9,9],[9,1,9,9,9],[9,9,1,9,9],[9,9,9,1,9],[9,9,9,9,1],[2,9,9,9,9],[9,2,9,9,9],[9,9,2,9,9],[9,9,9,2,9],[9,9,9,9,2]])  # single finger chords
+# chords.extend([[9,2,2,2,9],[1,2,2,9,9],[2,9,2,2,9],[9,2,1,2,9],[9,9,2,2,2],[2,1,1,9,9],[2,9,1,2,9],[9,1,1,1,9],[9,1,1,2,9],[1,1,1,9,9]])  # 3-finger chords easy
+# chords.extend([[1,1,1,1,1],[2,1,1,1,1],[2,2,2,2,2],[1,2,2,2,2],[2,1,1,1,2],[2,1,1,2,2],[2,2,2,2,1],[1,1,1,1,2],[1,1,1,2,2],[1,2,2,2,1]])  # 5-finger chords easy
+# chords.extend([[9,2,2,1,9],[1,9,2,9,1],[2,2,9,1,9],[2,1,9,9,2],[2,2,9,2,9],[9,1,9,1,1],[9,2,9,1,1],[2,9,2,1,9],[2,9,9,1,2],[9,1,1,9,2]])  # 3-finger chords med
+# chords.extend([[1,1,2,2,2],[2,1,2,2,1],[1,1,2,2,1],[1,2,1,1,2],[1,2,2,1,1],[2,1,2,1,1],[2,2,1,1,1],[2,2,1,2,1],[2,2,2,1,1],[1,1,1,2,2]])  # 5-finger chords med
+# chords.extend([[9,1,9,1,2],[1,9,1,9,2],[2,9,1,9,1],[9,1,1,9,1],[9,1,2,9,2],[9,2,9,1,2],[1,1,9,1,9],[9,2,1,9,1],[9,1,2,1,9],[9,1,9,2,1]])  # 3-finger chords diff
+# chords.extend([[1,1,2,1,2],[1,2,1,2,2],[1,1,2,1,1],[1,2,2,1,2],[2,1,2,1,2],[2,2,2,1,2],[1,1,1,2,1],[2,1,1,2,1],[1,2,1,1,1],[1,2,1,1,2]])  # 5-finger chords diff
+chords.extend([[2,9,2,1,2],[9,2,1,2,2],[9,1,2,1,1],[2,2,9,1,1]])  # Training Chords
 
 # Joining the elements of the chords:
 # single_finger_chords = [int(''.join(map(str, sublist))) for sublist in single_finger_chords]
@@ -133,8 +134,8 @@ chords = [int(''.join(map(str, sublist))) for sublist in chords]
 # Params:
 nChords = len(chords)   # number of chords
 nRep = 5            # number of repetition of each chord
-nChunks = 4         # number of chunks to repeat chords
-planTime = 500      # time for planning
+nChunks = 20         # number of chunks to repeat chords
+planTime = 0      # time for planning
 execMaxTime = 10000 # maximum time for execution
 feedbackTime = 800  # time to present feedback
 iti = 200           # inter-trial interval
@@ -143,7 +144,7 @@ iti = 200           # inter-trial interval
 column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'feedbackTime', 'iti']
 
 # setting the subject number !!!-------- Don't forget to change --------!!!:
-subNum = 10
+subNum = 1
 fileNameBase_sf = 'natChord_subj' + f"{subNum:02}" + '_run'
 filenameBase_chord = 'natChord_subj' + f"{subNum:02}" + '_run'
 
