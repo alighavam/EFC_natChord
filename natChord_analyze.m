@@ -231,6 +231,7 @@ switch (what)
         % loop on subjects:
         for i = 1:length(subjects)
             subj_sess = unique(data.sess(data.sn==subjects(i)));
+            subj_sess = [1];
             % loop on sess:
             for j = 1:length(subj_sess)
                 % loop on chords:
@@ -374,6 +375,10 @@ switch (what)
         [~,out] = natChord_analyze('chord_magnitude','plot_option',0);
         data.magnitude = out.mag;
         data.magnitude_n = out.mag_n;
+            
+        % coactivation model:
+        [~,out] = natChord_analyze('chord_coact','plot_option',0);
+        data.coact = out.coact;
 
         % emg channel values:
         C = natChord_analyze('EMG_prewhitening_matrix','plot_option',0);
@@ -1137,6 +1142,108 @@ switch (what)
                     scatter_corr(C.res_mag{C.sess==sess(i) & C.sn==subj(sn)}, C.res_measure{C.sess==sess(i) & C.sn==subj(sn)}, 'k', 'o')
                     title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],sess(i)),'FontSize',my_font.title)
                     xlabel('Norm EMG (n regressed out)','FontSize',my_font.xlabel)
+                    ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
+                    % xlim([-1.5,1.5])
+                    ylim([-2,2])
+                end
+            end
+        end
+        varargout{1} = C;
+        varargout{2} = out;
+    
+    case 'chord_coact'
+        % coactivation of the muscles in chord EMGs:
+        plot_option = 1;
+        measure = 'MD_efc';
+        vararginoptions(varargin,{'plot_option','measure'});
+        
+        % loading data:
+        data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
+        subj = unique(data.sn);
+        num_fingers = unique(data.num_fingers);
+        
+        % getting the values of measure:
+        values = eval(['data.' measure]);
+        
+        % making the output of the model:
+        out = [];
+        for sn = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(sn)));
+
+            for i = 1:length(sess)
+                % calculating avg chord patterns:
+                [pattern, chords] = natChord_analyze('avg_chord_patterns','subject_name',['subj' sprintf('%.02d',subj(sn))],'plot_option',0,'normalize_channels',1,'sess',sess(i));
+                n = get_num_active_fingers(chords);
+                
+                for j = 1:length(chords)
+                    tmp_pattern = pattern(chords==chords(j),:);
+                    G = tmp_pattern' * tmp_pattern;
+                    mag = trace(G);
+                    coact = (sum(G(:)) - mag)/mag;
+                    
+                    tmp.sn = subj(sn);
+                    tmp.sess = sess(i);
+                    tmp.num_fingers = n(j);
+                    tmp.chordID = chords(j);
+                    tmp.mag = mag;
+                    tmp.coact = coact;
+                    tmp.measure = values(data.chordID==chords(j) & data.sn==subj(sn) & data.sess==sess(i));
+                    out = addstruct(out,tmp,'row',1);
+                end
+            end
+        end
+        
+        % partial correlation between MD and coact considering
+        % number of fingers effect:
+        C  = [];
+        mag_n = [];
+        for sn = 1:length(subj)
+            sess = unique(data.sess(data.sn==subj(sn)));
+            for i = 1:length(sess)
+                X = out.coact(out.sess==sess(i) & out.sn==subj(sn));
+                Y = out.measure(out.sess==sess(i) & out.sn==subj(sn));
+                Z = make_design_matrix(out.chordID(out.sess==sess(i) & out.sn==subj(sn)),'n_fing');
+                [rho,p,resX,resY] = partial_corr(X,Y,Z);
+                
+                tmp.sn = subj(sn);
+                tmp.sess = sess(i);
+                tmp.rho = rho;
+                tmp.p = p;
+                tmp.res_mag = {resX};
+                mag_n = [mag_n ; resX];
+                tmp.res_measure = {resY};
+                C = addstruct(C,tmp,'row',1);
+            end
+        end
+        
+        % add mag_n and MD_n to out:
+        out.mag_n = mag_n;
+        
+        if (plot_option)
+            for sn = 1:length(subj)
+                sess = unique(data.sess(data.sn==subj(sn)));
+                for i = 1:length(sess)
+                    figure;
+                    hold on;
+                    % single finger:
+                    scatter_corr(out.coact(out.num_fingers==1 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==1 & out.sess==sess(i) & out.sn==subj(sn)), 'r', 'o'); hold on
+                    % 3 finger:
+                    scatter_corr(out.coact(out.num_fingers==3 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==3 & out.sess==sess(i) & out.sn==subj(sn)), 'b', 'filled')
+                    % 5 finger:
+                    scatter_corr(out.coact(out.num_fingers==5 & out.sess==sess(i) & out.sn==subj(sn)), out.measure(out.num_fingers==5 & out.sess==sess(i) & out.sn==subj(sn)), 'k', 'filled')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],sess(i)),'FontSize',my_font.title)
+                    xlabel('Norm Coact EMG','FontSize',my_font.xlabel)
+                    ylabel('MD','FontSize',my_font.ylabel)
+                    % xlim([0,3.6])
+                    ylim([0,4])
+                end
+    
+                for i = 1:length(sess)
+                    figure;
+                    hold on
+                    scatter_corr(C.res_mag{C.sess==sess(i) & C.sn==subj(sn)}, C.res_measure{C.sess==sess(i) & C.sn==subj(sn)}, 'k', 'o')
+                    title(sprintf('%s , sess %d',['subj' num2str(subj(sn))],sess(i)),'FontSize',my_font.title)
+                    xlabel('Norm Coact EMG (n regressed out)','FontSize',my_font.xlabel)
                     ylabel('MD (n regressed out)','FontSize',my_font.ylabel)
                     % xlim([-1.5,1.5])
                     ylim([-2,2])
@@ -2189,12 +2296,18 @@ switch (what)
         % handling input arguments:
         measure = 'MD';
         sess = [3,4];
+        % model_names = {'n_fing','n_fing+transition','n_fing+additive','n_fing+all_2fing','n_fing+additive+all_2fing',... % behavioural models
+        %                'n_fing+force_avg','n_fing+force_2fing','n_fing+force_avg+force_2fing',... % force models
+        %                'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+emg_additive_avg+emg_2channel_avg',... % EMG models
+        %                'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'}; % inference models
         model_names = {'n_fing','n_fing+transition','n_fing+additive','n_fing+all_2fing','n_fing+additive+all_2fing',... % behavioural models
                        'n_fing+force_avg','n_fing+force_2fing','n_fing+force_avg+force_2fing',... % force models
                        'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+emg_additive_avg+emg_2channel_avg',... % EMG models
-                       'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'}; % inference models
+                       'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+coact_avg','n_fing+magnitude_avg+coact_avg','n_fing+nSphere_avg+magnitude_avg','n_fing+nSphere_avg+coact_avg','n_fing+nSphere_avg+coact_avg+magnitude_avg'}; % inference models
+        % base_models = {'n_fing','transition','additive','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
+        %                'nSphere_avg','magnitude_avg'};
         base_models = {'n_fing','transition','additive','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
-                       'nSphere_avg','magnitude_avg'};
+                       'nSphere_avg','magnitude_avg', 'coact_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
         % loading data:
@@ -3724,7 +3837,7 @@ switch (what)
 
         % tranforming subject numbers to subject names:
         subject_names = strcat('subj',num2str(subjects,'%02.f'));
-
+        
         % define dataframe:
         C = [];
         % loop on subj:
@@ -3813,7 +3926,9 @@ switch (what)
         for i = 1:length(subj)
             % loop on sess:
             sess = unique(C.sess(C.sn==subj(i)));
-            for j = 1:length(sess)
+            % Ali changed here
+            sess = [1];
+            for j = 1:length(sess) 
                 % loop on halves:
                 for k = 1:length(halves)
                     % get the coefs:
@@ -3987,6 +4102,7 @@ switch (what)
         for i = 1:length(subj)
             % loop on sess:
             sess = unique(C.sess(C.sn==subj(i)));
+            sess = [1]; % Ali changed here.
             for j = 1:length(sess)
                 % loop on halves:
                 for k = 1:length(halves)
@@ -4221,6 +4337,7 @@ switch (what)
         for i = 1:length(subj)
             % loop on sess:
             sess = unique(C.sess(C.sn==subj(i)));
+            sess = [1]; % Ali changed here.
             for j = 1:length(sess)
                 % loop on halves:
                 for k = 1:length(halves)

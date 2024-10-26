@@ -8,7 +8,6 @@ sn = 1; % subjects to get certain methods for
 sess = 1;
 vararginoptions(varargin,{'sn','sess'})
 
-
 switch model_name
     case 'n_fing'
         X = zeros(length(chords),5);
@@ -176,6 +175,30 @@ switch model_name
         X = zeros(size(chords));
         for i = 1:length(chords)
             X(i,1) =  avg_magnitude(out_chordID==chords(i));
+        end
+
+    case 'coact_avg'
+        out = dload(fullfile(project_path,'analysis','natChord_analysis.tsv'));
+        sn_unique = unique(out.sn);
+
+        % calculate group avg:
+        avg_coact = 0;
+        for i = 1:length(sn_unique)
+            % getting the subject session average:
+            sess = unique(out.sess(out.sn==sn_unique(i)));
+            tmp_coact = 0;
+            for j = 1:length(sess)
+                tmp_coact = tmp_coact + out.coact(out.sn==sn_unique(i) & out.sess==sess(j))/length(sess);
+            end
+
+            avg_coact = avg_coact + tmp_coact/length(sn_unique);
+        end
+        out_chordID = out.chordID(out.sn==1 & out.sess==1);
+
+        % making the design matrix:
+        X = zeros(size(chords));
+        for i = 1:length(chords)
+            X(i,1) =  avg_coact(out_chordID==chords(i));
         end
 
     case 'emg_additive_avg'
