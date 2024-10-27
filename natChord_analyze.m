@@ -2300,13 +2300,13 @@ switch (what)
         %                'n_fing+force_avg','n_fing+force_2fing','n_fing+force_avg+force_2fing',... % force models
         %                'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+emg_additive_avg+emg_2channel_avg',... % EMG models
         %                'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+nSphere_avg+magnitude_avg'}; % inference models
-        model_names = {'n_fing','n_fing+transition','n_fing+additive','n_fing+all_2fing','n_fing+additive+all_2fing',... % behavioural models
+        model_names = {'n_fing','n_fing+transition','n_fing+additive','n_fing+symmetries','n_fing+all_2fing','n_fing+additive+all_2fing',... % behavioural models
                        'n_fing+force_avg','n_fing+force_2fing','n_fing+force_avg+force_2fing',... % force models
                        'n_fing+emg_additive_avg','n_fing+emg_2channel_avg','n_fing+emg_additive_avg+emg_2channel_avg',... % EMG models
                        'n_fing+nSphere_avg','n_fing+magnitude_avg','n_fing+coact_avg','n_fing+magnitude_avg+coact_avg','n_fing+nSphere_avg+magnitude_avg','n_fing+nSphere_avg+coact_avg','n_fing+nSphere_avg+coact_avg+magnitude_avg'}; % inference models
         % base_models = {'n_fing','transition','additive','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
         %                'nSphere_avg','magnitude_avg'};
-        base_models = {'n_fing','transition','additive','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
+        base_models = {'n_fing','transition','additive','symmetries','all_2fing','force_avg','force_2fing','emg_additive_avg','emg_2channel_avg',...
                        'nSphere_avg','magnitude_avg', 'coact_avg'};
         vararginoptions(varargin,{'chords','measure','model_names'})
         
