@@ -278,7 +278,34 @@ ylim([0,1])
 % plot(mean(var_5fing(end-n:end,:),1),'r')
 % ylim([0,0.7])
 
+%% EMG beta values:
+
+C = load('analysis/emg_models_details_MD.mat').C;
+df = dload('analysis/emg_models_MD.tsv');
+emg = getrow(C,strcmp(C.model, 'emg_additive_avg'));
+
+B = zeros(10,1);
+
+for i = 1:length(emg.B)
+    B = B + emg.B{i}/length(emg);
+end
+
+figure;
+bar(B)
+h = gca;
+h.XTickLabel = {'e1','e2','e3','e4','e5','f1','f2','f3','f4','f5'};
 
 
+emg = getrow(C,strcmp(C.model, 'n_fing+emg_additive_avg'));
 
+B = zeros(13,1);
+
+for i = 1:length(emg.B)
+    B = B + emg.B{i}/length(emg);
+end
+
+figure;
+bar(B)
+h = gca;
+h.XTickLabel = {'1','2','3','e1','e2','e3','e4','e5','f1','f2','f3','f4','f5'};
 
