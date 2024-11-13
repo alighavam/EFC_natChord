@@ -231,7 +231,7 @@ switch (what)
         % loop on subjects:
         for i = 1:length(subjects)
             subj_sess = unique(data.sess(data.sn==subjects(i)));
-            subj_sess = [1];
+            subj_sess = [1]; % Only analyze the data for session 1
             % loop on sess:
             for j = 1:length(subj_sess)
                 % loop on chords:
@@ -3827,7 +3827,7 @@ switch (what)
         fontname("Arial")
 
     case 'PCA_natural'
-        sampling_option = 'whole_sampled';
+        sampling_option = 'halves';
         vararginoptions(varargin,{'sampling_option'});
         % loading data:
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
@@ -3851,6 +3851,7 @@ switch (what)
             emg_dist = emg_dist.emg_natural_dist;
             
             sess = unique(data.sess(data.sn == subjects(sn)));
+            sess = [1];
             % loop on subject sessions:
             for j = 1:length(sess)
                 % scaling factors:

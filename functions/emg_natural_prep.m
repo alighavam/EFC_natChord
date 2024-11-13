@@ -229,7 +229,24 @@ switch sampling_option
             dist.dist{i,1} = sampled_emg;
         end
 
-    case 'peaks'
+    case 'halves'
+        % Creating the sampling intervals:
+        intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
+        intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
+        
+        % sampling the natural EMGs:
+        sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
+
+        for i = 1:size(intervals,1)
+            % windowing the interval:
+            tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
+            % RMS of window:
+            sampled_emg(i,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
+        end
+        dist.partition(1,1) = 1;
+        dist.dist{1,1} = sampled_emg(1:round(size(sampled_emg,1)/2),:);
+        dist.partition(2,1) = 2;
+        dist.dist{2,1} = sampled_emg(round(size(sampled_emg,1)/2)+1:end,:);
 
     otherwise
         error('emg_natural_prep: no option %s',sampling_option)
