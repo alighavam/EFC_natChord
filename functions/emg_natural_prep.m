@@ -243,11 +243,58 @@ switch sampling_option
             % RMS of window:
             sampled_emg(i,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
         end
+        dist.sess(1,1) = str2double(sess(end-1:end));
         dist.partition(1,1) = 1;
         dist.dist{1,1} = sampled_emg(1:round(size(sampled_emg,1)/2),:);
+        dist.sess(2,1) = str2double(sess(end-1:end));
         dist.partition(2,1) = 2;
         dist.dist{2,1} = sampled_emg(round(size(sampled_emg,1)/2)+1:end,:);
 
+    case 'halves_thresholded'
+        % Creating the sampling intervals:
+        intervals = [1:wn_size:size(emg_data_selected,1)-wn_size]';
+        intervals = [intervals, [wn_size:wn_size:size(emg_data_selected,1)]'];
+        
+        % sampling the natural EMGs:
+        sampled_emg = zeros(size(intervals,1),size(emg_data_selected,2));
+
+        for i = 1:size(intervals,1)
+            % windowing the interval:
+            tmp = emg_data_selected(intervals(i,1):intervals(i,2),:) .* wn;
+            % RMS of window:
+            sampled_emg(i,:) = sqrt(sum(tmp.^2,1)./sum(wn,1));
+        end
+
+        % thresholding based on norm of channels after scaling:
+        tmp_sample = sampled_emg;
+        
+        % scaling factors:
+        subject_name = subject_info.participant_id{1};
+        scales = get_emg_scales(str2double(subject_name(end-1:end)),str2double(sess(end-1:end)));
+        
+        % normalizing the natural EMGs:
+        tmp_sample = tmp_sample ./ scales;
+            
+        % Norm of all samples:
+        samples_norm = vecnorm(tmp_sample');
+
+        % avg of the norms:
+        avg_norm = mean(samples_norm);
+    
+        % sampling the sampled EMGs based on mean norm threshold:
+        % indices for each electrode that are more than their avg:
+        ind = samples_norm >= 2*avg_norm;
+    
+        % sub sampling:
+        sampled_emg = sampled_emg(ind,:);
+
+        dist.sess(1,1) = str2double(sess(end-1:end));
+        dist.partition(1,1) = 1;
+        dist.dist{1,1} = sampled_emg(1:round(size(sampled_emg,1)/2),:);
+        dist.sess(2,1) = str2double(sess(end-1:end));
+        dist.partition(2,1) = 2;
+        dist.dist{2,1} = sampled_emg(round(size(sampled_emg,1)/2)+1:end,:);
+        
     otherwise
         error('emg_natural_prep: no option %s',sampling_option)
 end
