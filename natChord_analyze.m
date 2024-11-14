@@ -479,6 +479,7 @@ switch (what)
         if (iscell(subject_name))
             for i = 1:length(subject_name)        
                 sess = unique(data.sess(data.sn==str2double(subject_name{i}(end-1:end))));
+                sess = [1];
                 sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
 
                 % Preprocessing and dealing with the natural EMGs:
@@ -488,6 +489,7 @@ switch (what)
         % if a single subject as a char was given:
         else
             sess = unique(data.sess(data.sn==str2double(subject_name(end-1:end))));
+            sess = [1];
             sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
 
             % Preprocessing and dealing with the natural EMGs:
@@ -3832,7 +3834,7 @@ switch (what)
         % loading data:
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
         data = dload(fullfile(project_path, 'analysis', 'natChord_chord.tsv'));
-
+        
         chords = data.chordID(data.sn==1 & data.sess==1);
         subjects = unique(data.sn);
 
@@ -3864,10 +3866,10 @@ switch (what)
                 end
                 
                 % PCA of half-half natural data:
-                half_idx = [[1,3,5,7,9] ; [2,4,6,8,10]];
+                half_idx = [1,2];
                 for h = 1:2
-                    the_half = half_idx(h,:);
-                    natural_emg = vertcat(emg_dist_sess.dist{the_half});
+                    the_half = half_idx(h);
+                    natural_emg = emg_dist_sess.dist{the_half};
                     [coeff_nat, score_nat, eigenvalues_nat, ~, explained_nat] = pca(natural_emg);
                     tmp.sn = subjects(sn);
                     tmp.sess = sess(j);
@@ -3922,7 +3924,7 @@ switch (what)
         
         subj = unique(C.sn);
         halves  = unique(C.half);
-
+        
         ANA = [];
         % loop on subj:
         for i = 1:length(subj)
