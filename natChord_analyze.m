@@ -3829,7 +3829,7 @@ switch (what)
         fontname("Arial")
 
     case 'PCA_natural'
-        sampling_option = 'halves';
+        sampling_option = 'halves_thresholded';
         vararginoptions(varargin,{'sampling_option'});
         % loading data:
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
@@ -3930,7 +3930,7 @@ switch (what)
         for i = 1:length(subj)
             % loop on sess:
             sess = unique(C.sess(C.sn==subj(i)));
-            % Ali changed here
+            % Ali changed here - only analyze first session
             sess = [1];
             for j = 1:length(sess) 
                 % loop on halves:
@@ -3967,6 +3967,10 @@ switch (what)
                         tmp_df.nat_explained = var_nat2nat / nat_var * 100;
                         tmp_df.chord_explained = var_chord2nat / emg_var * 100;
                         ANA = addstruct(ANA,tmp_df,'row','force');
+                        
+                        % if i_pc == 1
+                        %     fprintf('\nNat = %.3f , chord=%.3f\n',var_nat2nat / nat_var * 100,var_chord2nat / emg_var * 100)
+                        % end
                     end
                 end
             end
