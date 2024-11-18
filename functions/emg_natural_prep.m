@@ -245,10 +245,17 @@ switch sampling_option
         end
         dist.sess(1,1) = str2double(sess(end-1:end));
         dist.partition(1,1) = 1;
-        dist.dist{1,1} = sampled_emg(1:round(size(sampled_emg,1)/2),:);
         dist.sess(2,1) = str2double(sess(end-1:end));
         dist.partition(2,1) = 2;
-        dist.dist{2,1} = sampled_emg(round(size(sampled_emg,1)/2)+1:end,:);
+        
+        quarters = round(linspace(1,size(sampled_emg,1),5));
+        q1_idx = [quarters(1):quarters(2)];
+        q2_idx = [quarters(2)+1:quarters(3)];
+        q3_idx = [quarters(3)+1:quarters(4)];
+        q4_idx = [quarters(4)+1:quarters(5)];
+
+        dist.dist{1,1} = sampled_emg([q1_idx,q3_idx],:);
+        dist.dist{2,1} = sampled_emg([q2_idx,q4_idx],:);
 
     case 'halves_thresholded'
         % Creating the sampling intervals:

@@ -457,12 +457,12 @@ switch (what)
 
     case 'make_natural_dist'
         subject_name = 'subj01';
-        fs_emg = 2148.1481;         % EMG sampling rate in Hz  
+        fs_emg = 2148.1481;                     % EMG sampling rate in Hz
         Fstop_lpf = 40;
-        natural_window_size = 20;      % window size to sample natural EMG
+        natural_window_size = 20;       % window size to sample natural EMG
         sampling_option = 'whole_thresholded';      % sampling option to select windows from natural EMGs.
         natural_window_type = 'Rect';   % sampling window type for natural EMGs.
-        wn_spacing = 10;                 % sampling spacing for the 'whole_sampled' option.
+        wn_spacing = 10;                % sampling spacing for the 'whole_sampled' option.
         vararginoptions(varargin,{'subject_name','Fstop_lpf', ...
                                   'sampling_option','natural_window_size','natural_window_type','wn_spacing'});
 
@@ -477,7 +477,7 @@ switch (what)
                 
         % if a cell containing multiple subjects was given:
         if (iscell(subject_name))
-            for i = 1:length(subject_name)        
+            for i = 1:length(subject_name)
                 sess = unique(data.sess(data.sn==str2double(subject_name{i}(end-1:end))));
                 sess = [1];
                 sess_cell = cellfun(@(x) ['sess', sprintf('%02d', x)], num2cell(sess), 'UniformOutput', false);
@@ -3829,7 +3829,7 @@ switch (what)
         fontname("Arial")
 
     case 'PCA_natural'
-        sampling_option = 'halves_thresholded';
+        sampling_option = 'halves';
         vararginoptions(varargin,{'sampling_option'});
         % loading data:
         [emg_rel,emg_pattern] = natChord_analyze('emg_reliability');
