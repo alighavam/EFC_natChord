@@ -1,4 +1,4 @@
-function [chordVecSep, chordVec] = generateAllChords()
+function [chordVec, chordVecSep] = generateAllChords()
 % Ali Ghavampour 2023 - alighavam79@gmail.com
 % This function generates all of the possible chords
 
