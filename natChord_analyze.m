@@ -5,7 +5,8 @@ addpath('functions/')
 % setting paths:
 usr_path = userpath;
 usr_path = usr_path(1:end-17);
-project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+% project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+baseDir = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
 
 % colors:
 colors_red = [[255, 219, 219] ; [255, 146, 146] ; [255, 73, 73] ; [255, 0, 0] ; [182, 0, 0]]/255;
@@ -4685,7 +4686,6 @@ switch (what)
         end
 
     case 'natural_emg_reliability'
-        D = dload('/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_chord.tsv');
         sn = 1;
         % dist = load(['/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_subj' num2str(sn,'%02d') '_emg_natural_halves.mat']);
         % dist = dist.emg_natural_dist;
@@ -4711,55 +4711,48 @@ switch (what)
         fs_emg = 2148.1481; 
         mov_state = [2,3,4];
         mov_state_names = ['plan','exec','feedback'];
-
-        emg = load(sprintf('/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_subj%02d_emg.mat',sn));
+        
+        emg = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_emg.mat',sn)));
         emg = emg.EMG_struct;
-        mov = load(sprintf('/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_subj%02d_mov.mat',sn));
+        mov = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_mov.mat',sn)));
         mov = mov.MOV_struct;
-        D_sn = dload(sprintf('/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_subj%02d_raw.tsv',sn));
+        D_sn = dload(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_raw.tsv',sn)));
         
-        % check mov and emg alignment:
-        idx1 = find(mov{1}(:,1)==3,1);
-        idx2 = find(mov{1}(:,1)==4,1)-1;
-
-        % get force:
-        t_f = mov{1}(idx1:idx2,3) - mov{1}(idx1,3);
-        force = mov{1}(idx1:idx2,19:23);
-        
-        % find corresponding index in emg data:
-        idx1_emg = round(mov{1}(idx1,3)/1000*fs_emg);
-        idx2_emg = round(mov{1}(idx2,3)/1000*fs_emg);
-        
-        % select emg data:
-        emg_sig = emg{1}(idx1_emg:idx2_emg,:);
-        t_emg = linspace(0,t_f(end),size(emg_sig,1));
-        emg_f1 = emg_sig(:,6);
-
-        % avg emg:
         hold_dur = 600; % ms
-        chord = 29999;
-        rows = find(D_sn.trialCorr==1 & D_sn.chordID==chord);
-        emg_vec = [];
-        for i = 1:length(rows)
-            % get mov indices corresponding to hold time.
-            idx_end = find(mov{rows(i)}(:,1)==4,1)-1;
-            idx_start = idx_end - round(hold_dur/1000 * fs_force) + 1;
-            
-            % get force:
-            t_f = mov{rows(i)}(idx_start:idx_end,3) - mov{rows(i)}(idx_start,3);
-            force = mov{rows(i)}(idx_start:idx_end,19:23);
-            
-            % find corresponding index in emg data:
-            idx_end_emg = round(mov{rows(i)}(idx_end,3)/1000*fs_emg);
-            idx_start_emg = idx_end_emg - round(hold_dur/1000 * fs_emg) + 1;
-            
-            % select emg data:
-            emg_sig = emg{rows(i)}(idx_start_emg:idx_end_emg,:);
-            t_emg = linspace(0,t_f(end),size(emg_sig,1));
-            
-            avg_time = mean(emg_sig,1);
-            emg_vec = [emg_vec ; avg_time];
+        chords = [19999, 91999, 99199, 99919, 99991, ...
+                  29999, 92999, 99299, 99929, 99992];
+        var_scale = [];
+        for j = 1:length(chords)
+            chord = chords(j);
+            rows = find(D_sn.trialCorr==1 & D_sn.chordID==chord);
+            emg_vec = [];
+            for i = 1:length(rows)
+                % get mov indices corresponding to hold time
+                idx_end = find(mov{rows(i)}(:,1)==4,1)-1;
+                idx_start = idx_end - round(hold_dur/1000 * fs_force) + 1;
+                
+                % get force:
+                t_f = mov{rows(i)}(idx_start:idx_end,3) - mov{rows(i)}(idx_start,3);
+                force = mov{rows(i)}(idx_start:idx_end,19:23);
+                
+                % find corresponding index in emg data:
+                idx_end_emg = round(mov{rows(i)}(idx_end,3)/1000*fs_emg);
+                idx_start_emg = idx_end_emg - round(hold_dur/1000 * fs_emg) + 1;
+                
+                % select emg data:
+                emg_sig = emg{rows(i)}(idx_start_emg:idx_end_emg,:);
+                t_emg = linspace(0,t_f(end),size(emg_sig,1));
+                
+                % avg_time = mean(emg_sig,1);
+                emg_vec = [emg_vec ; emg_sig'];
+            end
+            avg_emg = mean(emg_vec,1);
+            err_emg = emg_vec - avg_emg;
+            var(err_emg(:))
         end
+        
+        
+        
         
         % avg_emg = mean(emg_vec,1);
         % err_emg = emg_vec - avg_emg;
