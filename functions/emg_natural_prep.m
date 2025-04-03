@@ -308,7 +308,6 @@ switch sampling_option
 
         dist.dist{1,1} = sampled_emg([q1_idx,q3_idx],:);
         dist.dist{2,1} = sampled_emg([q2_idx,q4_idx],:);
-        
     otherwise
         error('emg_natural_prep: no option %s',sampling_option)
 end
