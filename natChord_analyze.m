@@ -4686,84 +4686,113 @@ switch (what)
         end
 
     case 'natural_emg_reliability'
-        sn = 1;
-        % dist = load(['/Users/alighavampour/Desktop/Projects/EFC_natChord/analysis/natChord_subj' num2str(sn,'%02d') '_emg_natural_halves.mat']);
-        % dist = dist.emg_natural_dist;
-        % 
-        % row = D.sn==sn & D.sess==1;
-        % emg_scales = [D.scale_e1(row), D.scale_e2(row),D.scale_e3(row),D.scale_e4(row),D.scale_e5(row),...
-        %               D.scale_f1(row), D.scale_f2(row),D.scale_f3(row),D.scale_f4(row),D.scale_f5(row)];
-        % emg_scales = emg_scales(1,:);
-        % 
-        % dist.dist{1} = dist.dist{1} ./ emg_scales;
-        % dist.dist{2} = dist.dist{2} ./ emg_scales;
-        % 
-        % cov1 = dist.dist{1}' * dist.dist{1};
-        % cov2 = dist.dist{2}' * dist.dist{2};
-        % % cov12 = dist.dist{1}' * dist.dist{2};
-        % 
-        % figure;
-        % imagesc(cov1);
-        % 
-        % figure;
-        % imagesc(cov2);
-        fs_force = 500;
-        fs_emg = 2148.1481; 
-        mov_state = [2,3,4];
-        mov_state_names = ['plan','exec','feedback'];
+        D = dload(fullfile(baseDir, 'analysis', sprintf('natChord_chord.tsv')));
+        subjects = unique(D.sn)';
         
-        emg = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_emg.mat',sn)));
-        emg = emg.EMG_struct;
-        mov = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_mov.mat',sn)));
-        mov = mov.MOV_struct;
-        D_sn = dload(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_raw.tsv',sn)));
-        
-        hold_dur = 600; % ms
-        chords = [19999, 91999, 99199, 99919, 99991, ...
-                  29999, 92999, 99299, 99929, 99992];
-        var_scale = [];
-        for j = 1:length(chords)
-            chord = chords(j);
-            rows = find(D_sn.trialCorr==1 & D_sn.chordID==chord);
-            emg_vec = [];
-            for i = 1:length(rows)
-                % get mov indices corresponding to hold time
-                idx_end = find(mov{rows(i)}(:,1)==4,1)-1;
-                idx_start = idx_end - round(hold_dur/1000 * fs_force) + 1;
-                
-                % get force:
-                t_f = mov{rows(i)}(idx_start:idx_end,3) - mov{rows(i)}(idx_start,3);
-                force = mov{rows(i)}(idx_start:idx_end,19:23);
-                
-                % find corresponding index in emg data:
-                idx_end_emg = round(mov{rows(i)}(idx_end,3)/1000*fs_emg);
-                idx_start_emg = idx_end_emg - round(hold_dur/1000 * fs_emg) + 1;
-                
-                % select emg data:
-                emg_sig = emg{rows(i)}(idx_start_emg:idx_end_emg,:);
-                t_emg = linspace(0,t_f(end),size(emg_sig,1));
-                
-                % avg_time = mean(emg_sig,1);
-                emg_vec = [emg_vec ; emg_sig'];
+        RDM = {};
+        corr_mat = {};
+        for sn = subjects
+            dist = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_emg_natural_halves.mat',sn)));
+            dist = dist.emg_natural_dist;
+            
+            row = D.sn==sn & D.sess==1;
+            emg_scales = [D.scale_e1(row), D.scale_e2(row),D.scale_e3(row),D.scale_e4(row),D.scale_e5(row),...
+                          D.scale_f1(row), D.scale_f2(row),D.scale_f3(row),D.scale_f4(row),D.scale_f5(row)];
+            emg_scales = emg_scales(1,:);
+            % 
+            % dist.dist{1} = dist.dist{1} ./ emg_scales;
+            % dist.dist{2} = dist.dist{2} ./ emg_scales;
+            % 
+            % cov1 = dist.dist{1}' * dist.dist{1};
+            % cov2 = dist.dist{2}' * dist.dist{2};
+            % % cov12 = dist.dist{1}' * dist.dist{2};
+            % 
+            % figure;
+            % imagesc(cov1);
+            % 
+            % figure;
+            % imagesc(cov2);
+            fs_force = 500;
+            fs_emg = 2148.1481; 
+            mov_state = [2,3,4];
+            mov_state_names = ['plan','exec','feedback'];
+            
+            emg = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_emg.mat',sn)));
+            emg = emg.EMG_struct;
+            mov = load(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_mov.mat',sn)));
+            mov = mov.MOV_struct;
+            D_sn = dload(fullfile(baseDir,'analysis',sprintf('natChord_subj%02d_raw.tsv',sn)));
+            
+            hold_dur = 600; % ms
+            chords = [19999, 91999, 99199, 99919, 99991, ...
+                      29999, 92999, 99299, 99929, 99992];
+            cols_in_emg = [1,2,3,4,5,6,7,8,9,10];
+            var_scale = [];
+            for j = 1:length(chords)
+                chord = chords(j);
+                rows = find(D_sn.trialCorr==1 & D_sn.chordID==chord);
+                emg_vec = [];
+                for i = 1:length(rows)
+                    % get mov indices corresponding to hold time
+                    idx_end = find(mov{rows(i)}(:,1)==4,1)-1;
+                    idx_start = idx_end - round(hold_dur/1000 * fs_force) + 1;
+                    
+                    % get force:
+                    t_f = mov{rows(i)}(idx_start:idx_end,3) - mov{rows(i)}(idx_start,3);
+                    force = mov{rows(i)}(idx_start:idx_end,19:23);
+                    
+                    % find corresponding index in emg data:
+                    idx_end_emg = round(mov{rows(i)}(idx_end,3)/1000*fs_emg);
+                    idx_start_emg = idx_end_emg - round(hold_dur/1000 * fs_emg) + 1;
+                    
+                    % select emg data:
+                    emg_sig = emg{rows(i)}(idx_start_emg:idx_end_emg,:);
+                    t_emg = linspace(0,t_f(end),size(emg_sig,1));
+                    
+                    % avg_time = mean(emg_sig,1);
+                    emg_vec = [emg_vec ; emg_sig(:,cols_in_emg(j))'];
+                end
+                avg_emg = mean(emg_vec,1);
+                err_emg = emg_vec - avg_emg;
+                var_scale(j) = var(err_emg(:));
             end
-            avg_emg = mean(emg_vec,1);
-            err_emg = emg_vec - avg_emg;
-            var(err_emg(:))
+            
+            tmp1 = dist.dist{1} ./ sqrt(var_scale);
+            tmp1 = dist.dist{1} ./ max(tmp1);
+            tmp1 = tmp1 - mean(tmp1,1);
+            tmp2 = dist.dist{2} ./ sqrt(var_scale);
+            tmp2 = dist.dist{2} ./ max(tmp2);
+            tmp2 = tmp2 - mean(tmp2,1);
+            
+            cov1 = tmp1' * tmp1;
+            cov2 = tmp2' * tmp2;
+            RDM1 = squareform(pdist(tmp1', 'euclidean'));
+            RDM2 = squareform(pdist(tmp2', 'euclidean'));
+            
+            half1 = [tmp1(1:round(size(tmp1,1)/2),:) ; tmp2(1:round(size(tmp1,1)/2),:)];
+            half2 = [tmp1(round(size(tmp1,1)/2)+1:end,:) ; tmp2(round(size(tmp2,1)/2)+1:end,:)];
+            corr1 = corr(half1);
+            corr2 = corr(half2);
+            % corr3 = corr(tmp2(1:round(size(tmp2,1)/2),:));
+            % corr4 = corr(tmp2(round(size(tmp2,1)/2)+1:end,:));
+            
+            % figure;
+            % imagesc(sqrt(RDM1));
+            % axis square;
+            % 
+            % figure;
+            % imagesc(sqrt(RDM2));
+            % axis square;
+            % 
+            RDM{sn,1} = RDM1;
+            RDM{sn,2} = RDM2;
+
+            corr_mat{sn,1} = corr1;
+            corr_mat{sn,2} = corr2;
         end
-        
-        
-        
-        
-        % avg_emg = mean(emg_vec,1);
-        % err_emg = emg_vec - avg_emg;
-        
-        % var(err_emg(:))
-        
-        % figure;
-        % plot(t_emg,avg_emg)
-        % figure;
-        % plot(t_emg,emg_vec')
-        a=1;
+        varargout{1} = RDM;
+        varargout{2} = corr_mat;
+
     otherwise
         error('The analysis you entered does not exist!')
 end
