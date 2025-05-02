@@ -1,5 +1,9 @@
+[RDM, corr_mat] = natChord_analyze('natural_emg_reliability');
+
+%%
 avg = 0;
 channel_names = {'e1','e2','e3','e4','e5','f1','f2','f3','f4','f5'};
+rho = [];
 for i = 1:10
     tmp1 = corr_mat{i,1};
     tmp2 = corr_mat{i,2};
@@ -7,36 +11,45 @@ for i = 1:10
     tmp = tmp1/2 + tmp2/2;
     avg = avg + tmp/10;
     
-    figure;
-    subplot(1,2,1)
-    imagesc(tmp1); hold on;
-    line([5.5 5.5], [0.5 10.5], 'Color', 'k', 'LineWidth', 2)
-    line([0.5 10.5], [5.5 5.5], 'Color', 'k', 'LineWidth', 2)
-    axis square
-    colormap('cividis')
-    clim([0 1])
-    colorbar
-    title('first half')
-    xticks(1:10)
-    xticklabels(channel_names)
-    yticks(1:10)
-    yticklabels(channel_names)
-    
-    
-    subplot(1,2,2)
-    imagesc(tmp2); hold on;
-    line([5.5 5.5], [0.5 10.5], 'Color', 'k', 'LineWidth', 2)
-    line([0.5 10.5], [5.5 5.5], 'Color', 'k', 'LineWidth', 2)
-    axis square
-    colormap('cividis')
-    clim([0 1])
-    colorbar
-    title('second half')
-    xticks(1:10)
-    xticklabels(channel_names)
-    yticks(1:10)
-    yticklabels(channel_names)
+    upper1 = tmp1(triu(true(size(tmp1)), 1));
+    upper2 = tmp2(triu(true(size(tmp2)), 1));
+
+    rho(i) = corr(upper1,upper2);
+    % figure;
+    % subplot(1,2,1)
+    % imagesc(tmp1); hold on;
+    % line([5.5 5.5], [0.5 10.5], 'Color', 'k', 'LineWidth', 2)
+    % line([0.5 10.5], [5.5 5.5], 'Color', 'k', 'LineWidth', 2)
+    % axis square
+    % colormap('cividis')
+    % clim([0 1])
+    % colorbar
+    % title('first half')
+    % xticks(1:10)
+    % xticklabels(channel_names)
+    % yticks(1:10)
+    % yticklabels(channel_names)
+    % 
+    % 
+    % subplot(1,2,2)
+    % imagesc(tmp2); hold on;
+    % line([5.5 5.5], [0.5 10.5], 'Color', 'k', 'LineWidth', 2)
+    % line([0.5 10.5], [5.5 5.5], 'Color', 'k', 'LineWidth', 2)
+    % axis square
+    % colormap('cividis')
+    % clim([0 1])
+    % colorbar
+    % title('second half')
+    % xticks(1:10)
+    % xticklabels(channel_names)
+    % yticks(1:10)
+    % yticklabels(channel_names)
 end
+
+mean_rho = mean(rho);
+sem_rho = std(rho) / sqrt(length(rho));
+
+fprintf('mean = %.3f +- %.3f sem\n',mean_rho,sem_rho);
 
 figure;
 imagesc(avg)
@@ -117,5 +130,80 @@ fontname("Arial")
 
 
 
+%% Fitting force model to single subject
+D = dload('/Users/alighavampour/Desktop/Projects/EFC1/analysis/efc1_chord.tsv');
 
+sn_list = unique(D.sn)';
+
+beta = [];
+subjects = [];
+regressor = [];
+finger = [];
+direction = [];
+for sn = sn_list
+    df = getrow(D, D.sn==sn);
+    chords = df.chordID(df.sess==3);
+    MD = df.MD(df.sess==3)/2 + df.MD(df.sess==4)/2;
+    idx = isnan(MD);
+    
+    MD(idx) = [];
+    chords(idx) = [];
+    
+    % force model
+    row1 = df.sess==3;
+    row2 = df.sess==4;
+    diff_force1 = [df.diff_force_f1(row1), df.diff_force_f2(row1), df.diff_force_f3(row1), df.diff_force_f4(row1), df.diff_force_f5(row1)];
+    diff_force2 = [df.diff_force_f1(row2), df.diff_force_f2(row2), df.diff_force_f3(row2), df.diff_force_f4(row2), df.diff_force_f5(row2)];
+    diff_force = diff_force1/2 + diff_force2/2;
+    idx = isnan(sum(diff_force,2));
+    diff_force(idx,:) = [];
+
+    X3 = zeros(length(chords),10);
+    for i = 1:length(chords)
+        ext = num2str(chords(i)) == '1';
+        flx = num2str(chords(i)) == '2';
+        X3(i,1:5) = ext .* diff_force(i,:);
+        X3(i,6:end) = flx .* diff_force(i,:) * -1;
+    end
+    X3(:,[4,5,9,10]) = X3(:,[4,5,9,10]) * 1.5;
+    
+    % n-fing:
+    X1 = zeros(length(chords),5);
+    n = get_num_active_fingers(chords);
+    for i = 1:length(n)
+        X1(i,n(i)) = 1;
+    end
+    sum_col = sum(X1,1);
+    X1(sum_col==0) = [];
+    
+    % additive single-finger:
+    X2 = zeros(length(chords),10);
+    for i = 1:length(chords)
+        X2(i,1:5) = num2str(chords(i)) == '1';
+        X2(i,6:10) = num2str(chords(i)) == '2';
+    end
+    
+    X = [X3];
+    
+    % linear regression:
+    b = (X' * X)^-1 * X' * MD;
+    
+    beta = [beta ; b];
+    subjects = [subjects ; sn * ones(size(b))];
+    regressor = [regressor ; (1:size(X,2))'];
+    finger = [finger ; [(1:5)';(1:5)']];
+    direction = [direction ; [ones(5,1);2*ones(5,1)]];
+end
+
+% idx_nfing = regressor<=5;
+% regressor(idx_nfing) = [];
+% beta(idx_nfing) = [];
+
+figure;
+myboxplot(regressor, beta, 'style_twoblock')
+% h = gca;
+% h.XTickLabel = {'e1','e2','e3','e4','e5','f1','f2','f3','f4','f5'};
+
+% RM-ANOVA 2way:
+T = anovaMixed(beta,subjects,'within',[finger,direction],{'finger','direction'});
 

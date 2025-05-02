@@ -5,7 +5,7 @@ addpath('functions/')
 % setting paths:
 usr_path = userpath;
 usr_path = usr_path(1:end-17);
-% project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
+project_path = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
 baseDir = fullfile(usr_path, 'Desktop', 'Projects', 'EFC_natChord');
 
 % colors:
@@ -2422,7 +2422,6 @@ switch (what)
         end
         varargout{1} = C;
         varargout{2} = stats;
-
 
     case 'model_testing_learning_slope_efc1'
         % handling input arguments:
